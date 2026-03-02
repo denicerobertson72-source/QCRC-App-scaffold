@@ -12,7 +12,16 @@ export async function getMyReservations() {
 
   if (error) throw error;
 
-  return (data ?? []) as Reservation[];
+  type ReservationRow = Omit<Reservation, "boats"> & {
+    boats: { name: string } | { name: string }[] | null;
+  };
+
+  const rows = ((data ?? []) as ReservationRow[]).map((row) => ({
+    ...row,
+    boats: Array.isArray(row.boats) ? (row.boats[0] ?? null) : row.boats,
+  }));
+
+  return rows;
 }
 
 export async function getBoats() {
