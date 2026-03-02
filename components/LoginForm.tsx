@@ -18,7 +18,7 @@ export function LoginForm() {
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/reservations`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/reservations`,
         },
       });
 
