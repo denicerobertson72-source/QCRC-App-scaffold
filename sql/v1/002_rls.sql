@@ -288,12 +288,6 @@ for select
 using (
   created_by = auth.uid()
   or public.can_manage_club_data()
-  or exists (
-    select 1
-    from public.reservation_crew rc
-    where rc.reservation_id = id
-      and rc.member_id = auth.uid()
-  )
 );
 
 drop policy if exists reservations_insert on public.reservations;
