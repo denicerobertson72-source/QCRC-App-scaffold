@@ -5,6 +5,7 @@ Next.js + Supabase app scaffold for rowing reservations, checkout/checkin, and d
 ## Prereqs
 - Node 20+
 - Supabase project with SQL already applied (`sql/v1/001..003`)
+  - Optional seed/setup helper: `sql/v1/004_seed.sql`
 
 ## Environment
 Copy `.env.example` to `.env.local` and fill values:
