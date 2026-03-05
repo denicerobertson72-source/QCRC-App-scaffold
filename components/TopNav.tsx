@@ -12,6 +12,7 @@ export function TopNav() {
         <Link href="/boats">Boats</Link>
         <Link href="/damage/new">Damage</Link>
         <Link href="/admin/members">Admin</Link>
+        <Link href="/account/security">Security</Link>
       </nav>
       <form action={signOutAction}>
         <Button type="submit" variant="secondary">

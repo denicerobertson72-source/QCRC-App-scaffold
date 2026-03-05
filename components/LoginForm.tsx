@@ -88,7 +88,9 @@ export function LoginForm() {
       }
       if (storageKey) window.localStorage.setItem(storageKey, "1");
       setPreferPassword(true);
-      setMessage("Account created. Check your email once to confirm, then you can use password login.");
+      setMessage(
+        "If this is a new account, confirm email once. If you already had an account, sign in via magic link once and set password under Security.",
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected sign-up error");
     }
