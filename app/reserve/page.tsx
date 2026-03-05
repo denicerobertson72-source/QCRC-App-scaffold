@@ -84,7 +84,7 @@ export default async function ReservePage({
                   <StatusChip label={boat.status === "available" ? "unavailable" : "out of service"} />
                 </div>
                 <p className="muted">
-                  {boat.boat_class_id} | {boat.boat_type} | skill {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
+                  {boat.boat_class_id} | {boat.boat_type} | level {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
                 </p>
                 <p>
                   This boat cannot be reserved right now.

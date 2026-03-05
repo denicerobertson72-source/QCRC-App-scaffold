@@ -22,11 +22,11 @@ as $$
   select b.*
   from public.boats b
   join me on true
-  join public.member_clearances mc
+  left join public.member_clearances mc
     on mc.member_id = me.id
    and mc.boat_class_id = b.boat_class_id
   where b.status = 'available'
-    and mc.clearance_level >= b.required_clearance
+    and greatest(coalesce(mc.clearance_level, 0), public.skill_level_to_clearance(me.skill_level)) >= b.required_clearance
     and public.skill_level_rank(me.skill_level) >= public.skill_level_rank(b.required_skill_level)
     and (b.weight_class is null or b.weight_class = me.weight_class)
     and p_end_time > p_start_time

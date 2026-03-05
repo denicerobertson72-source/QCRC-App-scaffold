@@ -1,64 +1,4 @@
--- V1.5 skill/weight matching and boat metadata
-
--- ---------- Profiles ----------
-alter table public.profiles
-  add column if not exists skill_level text,
-  add column if not exists weight_class text;
-
-update public.profiles
-set skill_level = coalesce(skill_level, 'Beginner'),
-    weight_class = coalesce(weight_class, 'Mid-weight');
-
-alter table public.profiles
-  alter column skill_level set default 'Beginner',
-  alter column skill_level set not null,
-  alter column weight_class set default 'Mid-weight',
-  alter column weight_class set not null;
-
--- Replace checks idempotently
-alter table public.profiles drop constraint if exists profiles_skill_level_check;
-alter table public.profiles add constraint profiles_skill_level_check
-  check (skill_level in ('LTR', 'Beginner', 'Intermediate', 'Advanced', 'Elite'));
-
-alter table public.profiles drop constraint if exists profiles_weight_class_check;
-alter table public.profiles add constraint profiles_weight_class_check
-  check (weight_class in ('Lightweight', 'Mid-weight', 'Heavyweight'));
-
--- ---------- Boats ----------
-alter table public.boats
-  add column if not exists boat_number text,
-  add column if not exists required_skill_level text;
-
-update public.boats
-set required_skill_level = coalesce(required_skill_level, 'Beginner');
-
-alter table public.boats
-  alter column required_skill_level set default 'Beginner',
-  alter column required_skill_level set not null;
-
-alter table public.boats drop constraint if exists boats_required_skill_level_check;
-alter table public.boats add constraint boats_required_skill_level_check
-  check (required_skill_level in ('LTR', 'Beginner', 'Intermediate', 'Advanced', 'Elite'));
-
-alter table public.boats drop constraint if exists boats_weight_class_check;
-alter table public.boats add constraint boats_weight_class_check
-  check (weight_class is null or weight_class in ('Lightweight', 'Mid-weight', 'Heavyweight'));
-
--- ---------- Skill rank helper ----------
-create or replace function public.skill_level_rank(p_level text)
-returns int
-language sql
-immutable
-as $$
-  select case p_level
-    when 'LTR' then 1
-    when 'Beginner' then 2
-    when 'Intermediate' then 3
-    when 'Advanced' then 4
-    when 'Elite' then 5
-    else 0
-  end;
-$$;
+-- V1.6: let skill level satisfy boat clearance checks (avoids hidden numeric mismatch)
 
 create or replace function public.skill_level_to_clearance(p_level text)
 returns int
@@ -75,7 +15,6 @@ as $$
   end;
 $$;
 
--- ---------- Reservation eligibility ----------
 create or replace function public.can_user_reserve_boat(
   p_user_id uuid,
   p_boat_id uuid,
@@ -130,7 +69,6 @@ as $$
     );
 $$;
 
--- ---------- Availability RPC ----------
 create or replace function public.available_boats_for_window(
   p_start_time timestamptz,
   p_end_time timestamptz,

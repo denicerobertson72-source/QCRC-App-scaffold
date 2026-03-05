@@ -159,6 +159,7 @@ export async function addBoatAdminAction(formData: FormData) {
   const boatNumber = String(formData.get("boat_number") ?? "");
   const boatClassId = String(formData.get("boat_class_id") ?? "");
   const boatType = String(formData.get("boat_type") ?? "training");
+  const photoUrl = String(formData.get("photo_url") ?? "");
   const requiredSkillLevel = String(formData.get("required_skill_level") ?? "Beginner");
   const weightClass = String(formData.get("weight_class") ?? "");
   const requiredClearance = skillLevelToClearance(requiredSkillLevel);
@@ -170,12 +171,49 @@ export async function addBoatAdminAction(formData: FormData) {
     boat_number: boatNumber || null,
     boat_class_id: boatClassId,
     boat_type: boatType,
+    photo_url: photoUrl || null,
     required_skill_level: requiredSkillLevel,
     weight_class: weightClass || null,
     required_clearance: requiredClearance,
     status,
     rigging_notes: riggingNotes || null,
   });
+
+  if (error) throw error;
+  revalidatePath("/admin/boats");
+  revalidatePath("/boats");
+  revalidatePath("/reserve");
+}
+
+export async function updateBoatAdminAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const boatId = String(formData.get("boat_id") ?? "");
+  const name = String(formData.get("name") ?? "");
+  const boatNumber = String(formData.get("boat_number") ?? "");
+  const boatClassId = String(formData.get("boat_class_id") ?? "");
+  const boatType = String(formData.get("boat_type") ?? "training");
+  const photoUrl = String(formData.get("photo_url") ?? "");
+  const requiredSkillLevel = String(formData.get("required_skill_level") ?? "Beginner");
+  const weightClass = String(formData.get("weight_class") ?? "");
+  const requiredClearance = skillLevelToClearance(requiredSkillLevel);
+  const status = String(formData.get("status") ?? "available");
+  const riggingNotes = String(formData.get("rigging_notes") ?? "");
+
+  const { error } = await supabase
+    .from("boats")
+    .update({
+      name,
+      boat_number: boatNumber || null,
+      boat_class_id: boatClassId,
+      boat_type: boatType,
+      photo_url: photoUrl || null,
+      required_skill_level: requiredSkillLevel,
+      weight_class: weightClass || null,
+      required_clearance: requiredClearance,
+      status,
+      rigging_notes: riggingNotes || null,
+    })
+    .eq("id", boatId);
 
   if (error) throw error;
   revalidatePath("/admin/boats");
@@ -240,5 +278,60 @@ export async function triageDamageAdminAction(formData: FormData) {
   revalidatePath("/admin/damage");
   revalidatePath("/admin/analytics");
   revalidatePath("/boats");
+  revalidatePath("/reserve");
+}
+
+export async function addBoatAvailabilityBlockAdminAction(formData: FormData) {
+  const { supabase, user } = await assertAdmin();
+  const title = String(formData.get("title") ?? "");
+  const startsAt = String(formData.get("starts_at") ?? "");
+  const endsAt = String(formData.get("ends_at") ?? "");
+  const membershipType = String(formData.get("applies_to_membership_type") ?? "");
+  const boatClassId = String(formData.get("applies_to_boat_class_id") ?? "");
+  const isActive = String(formData.get("is_active") ?? "true") === "true";
+  const notes = String(formData.get("notes") ?? "");
+
+  const { error } = await supabase.from("boat_availability_blocks").insert({
+    title,
+    starts_at: startsAt,
+    ends_at: endsAt,
+    applies_to_membership_type: membershipType || null,
+    applies_to_boat_class_id: boatClassId || null,
+    is_active: isActive,
+    notes: notes || null,
+    created_by: user.id,
+  });
+
+  if (error) throw error;
+  revalidatePath("/admin/availability");
+  revalidatePath("/reserve");
+}
+
+export async function updateBoatAvailabilityBlockAdminAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const blockId = String(formData.get("block_id") ?? "");
+  const title = String(formData.get("title") ?? "");
+  const startsAt = String(formData.get("starts_at") ?? "");
+  const endsAt = String(formData.get("ends_at") ?? "");
+  const membershipType = String(formData.get("applies_to_membership_type") ?? "");
+  const boatClassId = String(formData.get("applies_to_boat_class_id") ?? "");
+  const isActive = String(formData.get("is_active") ?? "false") === "true";
+  const notes = String(formData.get("notes") ?? "");
+
+  const { error } = await supabase
+    .from("boat_availability_blocks")
+    .update({
+      title,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      applies_to_membership_type: membershipType || null,
+      applies_to_boat_class_id: boatClassId || null,
+      is_active: isActive,
+      notes: notes || null,
+    })
+    .eq("id", blockId);
+
+  if (error) throw error;
+  revalidatePath("/admin/availability");
   revalidatePath("/reserve");
 }

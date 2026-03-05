@@ -113,8 +113,10 @@ as $$
     where b.id = p_boat_id
       and b.status = 'available'
   ),
-  clearance_cte as (
-    select mc.clearance_level, b.required_clearance
+  eligibility_cte as (
+    select
+      greatest(mc.clearance_level, public.skill_level_to_clearance(p.skill_level)) as effective_clearance,
+      b.required_clearance
     from profile_cte p
     join boat_cte b on true
     join public.member_clearances mc
@@ -127,8 +129,8 @@ as $$
     and exists(select 1 from boat_cte)
     and exists(
       select 1
-      from clearance_cte c
-      where c.clearance_level >= c.required_clearance
+      from eligibility_cte c
+      where c.effective_clearance >= c.required_clearance
     )
     and exists(
       select 1

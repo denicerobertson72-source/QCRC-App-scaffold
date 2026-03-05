@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/Button";
 export function ReservationForm({ boat, start, end }: { boat: Boat; start: string; end: string }) {
   return (
     <form action={reserveBoatAction} className="card form-grid">
+      {boat.photo_url ? (
+        <img
+          src={boat.photo_url}
+          alt={`${boat.name} photo`}
+          style={{ width: "100%", borderRadius: "12px", border: "1px solid var(--line)", objectFit: "cover" }}
+        />
+      ) : null}
       <div className="page-title">
         <h3>
           {boat.name}
@@ -15,7 +22,7 @@ export function ReservationForm({ boat, start, end }: { boat: Boat; start: strin
         <StatusChip label={boat.boat_class_id} />
       </div>
       <p className="muted">
-        {boat.boat_type} | skill {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
+        {boat.boat_type} | level {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
       </p>
 
       <input type="hidden" name="boat_id" value={boat.id} />

@@ -25,6 +25,12 @@ export default async function AdminPage() {
             <p className="muted">Add boats and set out-of-service availability.</p>
             <Link href="/admin/boats">Open Boats</Link>
           </Card>
+
+          <Card className="stack">
+            <h3>Availability</h3>
+            <p className="muted">Block all boats (or a class/group) during practice windows.</p>
+            <Link href="/admin/availability">Open Availability</Link>
+          </Card>
         </div>
 
         <div className="row">
