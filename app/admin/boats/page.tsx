@@ -33,9 +33,6 @@ export default async function AdminBoatsPage() {
           <Field label="Boat type">
             <input name="boat_type" defaultValue="training" />
           </Field>
-          <Field label="Required clearance">
-            <input name="required_clearance" type="number" min={1} max={4} defaultValue={1} />
-          </Field>
           <Field label="Required skill level">
             <select name="required_skill_level" defaultValue="Beginner">
               <option value="LTR">LTR</option>
@@ -76,7 +73,6 @@ export default async function AdminBoatsPage() {
                 <th>Type</th>
                 <th>Skill</th>
                 <th>Weight</th>
-                <th>Required</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -90,7 +86,6 @@ export default async function AdminBoatsPage() {
                   <td>{boat.boat_type}</td>
                   <td>{boat.required_skill_level}</td>
                   <td>{boat.weight_class ?? "Any"}</td>
-                  <td>{boat.required_clearance}</td>
                   <td>{boat.status}</td>
                   <td>
                     <form action={updateBoatStatusAdminAction} className="inline-form">

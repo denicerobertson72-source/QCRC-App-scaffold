@@ -4,6 +4,21 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensureProfile } from "@/lib/auth";
 
+function skillLevelToClearance(level: string) {
+  switch (level) {
+    case "Elite":
+      return 4;
+    case "Advanced":
+      return 3;
+    case "Intermediate":
+      return 2;
+    case "Beginner":
+    case "LTR":
+    default:
+      return 1;
+  }
+}
+
 async function assertAdmin() {
   const { supabase, user } = await ensureProfile();
   const { data, error } = await supabase.from("profiles").select("role").eq("id", user.id).single();
@@ -146,7 +161,7 @@ export async function addBoatAdminAction(formData: FormData) {
   const boatType = String(formData.get("boat_type") ?? "training");
   const requiredSkillLevel = String(formData.get("required_skill_level") ?? "Beginner");
   const weightClass = String(formData.get("weight_class") ?? "");
-  const requiredClearance = Number(formData.get("required_clearance") ?? 1);
+  const requiredClearance = skillLevelToClearance(requiredSkillLevel);
   const status = String(formData.get("status") ?? "available");
   const riggingNotes = String(formData.get("rigging_notes") ?? "");
 

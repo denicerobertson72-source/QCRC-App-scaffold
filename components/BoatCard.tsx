@@ -13,7 +13,7 @@ export function BoatCard({ boat }: { boat: Boat }) {
         <StatusChip label={boat.boat_class_id} />
       </div>
       <p className="muted">
-        {boat.boat_type} | required clearance {boat.required_clearance} | skill {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
+        {boat.boat_type} | skill {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
       </p>
       <p>
         Status: <strong>{boat.status}</strong>

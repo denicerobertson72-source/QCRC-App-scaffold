@@ -15,7 +15,7 @@ export function ReservationForm({ boat, start, end }: { boat: Boat; start: strin
         <StatusChip label={boat.boat_class_id} />
       </div>
       <p className="muted">
-        {boat.boat_type} | clearance {boat.required_clearance} | skill {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
+        {boat.boat_type} | skill {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
       </p>
 
       <input type="hidden" name="boat_id" value={boat.id} />
