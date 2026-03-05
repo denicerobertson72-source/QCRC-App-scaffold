@@ -1,5 +1,7 @@
 import { TopNav } from "@/components/TopNav";
 import { getBoats } from "@/lib/queries";
+import { Card } from "@/components/ui/Card";
+import { PageTitle } from "@/components/ui/PageTitle";
 
 export default async function AdminBoatsPage() {
   const boats = await getBoats();
@@ -8,8 +10,8 @@ export default async function AdminBoatsPage() {
     <>
       <TopNav />
       <main className="stack">
-        <h1>Admin: Boats</h1>
-        <div className="card">
+        <PageTitle title="Admin: Boats" subtitle="Fleet classes, status, and clearance requirements." />
+        <Card>
           <table>
             <thead>
               <tr>
@@ -32,7 +34,7 @@ export default async function AdminBoatsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       </main>
     </>
   );

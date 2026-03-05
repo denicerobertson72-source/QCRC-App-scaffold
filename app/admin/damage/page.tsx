@@ -1,5 +1,8 @@
 import { TopNav } from "@/components/TopNav";
 import { ensureProfile } from "@/lib/auth";
+import { Card } from "@/components/ui/Card";
+import { PageTitle } from "@/components/ui/PageTitle";
+import { StatusChip } from "@/components/ui/StatusChip";
 
 export default async function AdminDamagePage() {
   const { supabase } = await ensureProfile();
@@ -13,19 +16,23 @@ export default async function AdminDamagePage() {
     <>
       <TopNav />
       <main className="stack">
-        <h1>Admin: Damage Queue</h1>
+        <PageTitle title="Admin: Damage Queue" subtitle="Incoming incidents requiring triage and resolution." />
+
         <div className="stack">
           {(data ?? []).map((item) => (
-            <article key={item.id} className="card">
-              <h3>{item.boat_id}</h3>
+            <Card key={item.id} className="stack">
+              <div className="page-title">
+                <h3>{item.boat_id}</h3>
+                <StatusChip label={item.status} />
+              </div>
               <p>
-                Severity {item.severity} | {item.status}
+                <strong>Severity {item.severity}</strong>
               </p>
               <p>{item.description}</p>
-              <p>{new Date(item.reported_at).toLocaleString()}</p>
-            </article>
+              <p className="muted">{new Date(item.reported_at).toLocaleString()}</p>
+            </Card>
           ))}
-          {(data ?? []).length === 0 ? <p>No damage reports yet.</p> : null}
+          {(data ?? []).length === 0 ? <Card subtle>No damage reports yet.</Card> : null}
         </div>
       </main>
     </>

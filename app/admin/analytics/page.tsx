@@ -1,5 +1,7 @@
 import { TopNav } from "@/components/TopNav";
 import { ensureProfile } from "@/lib/auth";
+import { Card } from "@/components/ui/Card";
+import { PageTitle } from "@/components/ui/PageTitle";
 
 export default async function AdminAnalyticsPage() {
   const { supabase } = await ensureProfile();
@@ -18,14 +20,14 @@ export default async function AdminAnalyticsPage() {
     <>
       <TopNav />
       <main className="stack">
-        <h1>Admin: Analytics</h1>
+        <PageTitle title="Admin: Analytics" subtitle="Utilization and incident visibility across the fleet." />
 
-        <article className="card">
+        <Card>
           <h2>Overdue Returns</h2>
           <p>{overdue ?? 0} checked-out boats are past expected return.</p>
-        </article>
+        </Card>
 
-        <article className="card">
+        <Card className="stack">
           <h2>Boat Usage (Recent)</h2>
           <table>
             <thead>
@@ -47,9 +49,9 @@ export default async function AdminAnalyticsPage() {
               ))}
             </tbody>
           </table>
-        </article>
+        </Card>
 
-        <article className="card">
+        <Card className="stack">
           <h2>Damage by Boat</h2>
           <table>
             <thead>
@@ -71,7 +73,7 @@ export default async function AdminAnalyticsPage() {
               ))}
             </tbody>
           </table>
-        </article>
+        </Card>
       </main>
     </>
   );

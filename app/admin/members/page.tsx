@@ -1,5 +1,7 @@
 import { TopNav } from "@/components/TopNav";
 import { ensureProfile } from "@/lib/auth";
+import { Card } from "@/components/ui/Card";
+import { PageTitle } from "@/components/ui/PageTitle";
 
 export default async function AdminMembersPage() {
   const { supabase } = await ensureProfile();
@@ -12,8 +14,8 @@ export default async function AdminMembersPage() {
     <>
       <TopNav />
       <main className="stack">
-        <h1>Admin: Members</h1>
-        <div className="card">
+        <PageTitle title="Admin: Members" subtitle="Membership status, role, and dues overview." />
+        <Card>
           <table>
             <thead>
               <tr>
@@ -38,7 +40,7 @@ export default async function AdminMembersPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       </main>
     </>
   );

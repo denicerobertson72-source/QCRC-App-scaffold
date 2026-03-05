@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Field } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -36,8 +38,8 @@ export function LoginForm() {
   return (
     <form onSubmit={sendMagicLink} className="card form-grid">
       <h1>QCRC Login</h1>
-      <label>
-        Email
+      <p className="muted">Use your club email to get a one-time sign-in link.</p>
+      <Field label="Email">
         <input
           type="email"
           required
@@ -45,9 +47,9 @@ export function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="name@club.org"
         />
-      </label>
-      <button type="submit">Send Magic Link</button>
-      {message ? <p>{message}</p> : null}
+      </Field>
+      <Button type="submit">Send Magic Link</Button>
+      {message ? <p className="success">{message}</p> : null}
       {error ? <p className="error">{error}</p> : null}
     </form>
   );
