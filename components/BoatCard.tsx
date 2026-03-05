@@ -6,11 +6,14 @@ export function BoatCard({ boat }: { boat: Boat }) {
   return (
     <Card className="stack">
       <div className="page-title">
-        <h3>{boat.name}</h3>
+        <h3>
+          {boat.name}
+          {boat.boat_number ? ` #${boat.boat_number}` : ""}
+        </h3>
         <StatusChip label={boat.boat_class_id} />
       </div>
       <p className="muted">
-        {boat.boat_type} | required clearance {boat.required_clearance}
+        {boat.boat_type} | required clearance {boat.required_clearance} | skill {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
       </p>
       <p>
         Status: <strong>{boat.status}</strong>

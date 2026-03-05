@@ -20,6 +20,9 @@ export default async function AdminBoatsPage() {
           <Field label="Boat name">
             <input name="name" required />
           </Field>
+          <Field label="Boat number">
+            <input name="boat_number" placeholder="e.g. 3" />
+          </Field>
           <Field label="Boat class">
             <select name="boat_class_id" defaultValue="1x">
               <option value="1x">1x</option>
@@ -32,6 +35,23 @@ export default async function AdminBoatsPage() {
           </Field>
           <Field label="Required clearance">
             <input name="required_clearance" type="number" min={1} max={4} defaultValue={1} />
+          </Field>
+          <Field label="Required skill level">
+            <select name="required_skill_level" defaultValue="Beginner">
+              <option value="LTR">LTR</option>
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+              <option value="Elite">Elite</option>
+            </select>
+          </Field>
+          <Field label="Weight class">
+            <select name="weight_class" defaultValue="">
+              <option value="">Any</option>
+              <option value="Lightweight">Lightweight</option>
+              <option value="Mid-weight">Mid-weight</option>
+              <option value="Heavyweight">Heavyweight</option>
+            </select>
           </Field>
           <Field label="Status">
             <select name="status" defaultValue="available">
@@ -51,8 +71,11 @@ export default async function AdminBoatsPage() {
             <thead>
               <tr>
                 <th>Name</th>
+                <th>#</th>
                 <th>Class</th>
                 <th>Type</th>
+                <th>Skill</th>
+                <th>Weight</th>
                 <th>Required</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -62,8 +85,11 @@ export default async function AdminBoatsPage() {
               {boats.map((boat) => (
                 <tr key={boat.id}>
                   <td>{boat.name}</td>
+                  <td>{boat.boat_number ?? "-"}</td>
                   <td>{boat.boat_class_id}</td>
                   <td>{boat.boat_type}</td>
+                  <td>{boat.required_skill_level}</td>
+                  <td>{boat.weight_class ?? "Any"}</td>
                   <td>{boat.required_clearance}</td>
                   <td>{boat.status}</td>
                   <td>

@@ -1,5 +1,5 @@
 import { ensureProfile } from "@/lib/auth";
-import type { Boat, Reservation } from "@/lib/types";
+import type { Boat, ProfileSummary, Reservation } from "@/lib/types";
 
 export async function getMyReservations() {
   const { supabase, user } = await ensureProfile();
@@ -28,12 +28,26 @@ export async function getBoats() {
   const { supabase } = await ensureProfile();
   const { data, error } = await supabase
     .from("boats")
-    .select("id, name, boat_class_id, boat_type, required_clearance, status, rigging_notes")
+    .select(
+      "id, name, boat_number, boat_class_id, boat_type, required_skill_level, weight_class, required_clearance, status, rigging_notes",
+    )
     .order("boat_class_id")
     .order("name");
 
   if (error) throw error;
   return (data ?? []) as Boat[];
+}
+
+export async function getMyProfileSummary() {
+  const { supabase, user } = await ensureProfile();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role, status, dues_ok, membership_type, skill_level, weight_class")
+    .eq("id", user.id)
+    .single();
+
+  if (error) throw error;
+  return data as ProfileSummary;
 }
 
 export async function getAvailableBoats(start: string, end: string, boatClassId?: string) {

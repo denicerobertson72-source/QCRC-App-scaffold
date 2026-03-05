@@ -12,7 +12,7 @@ security definer
 set search_path = public
 as $$
   with me as (
-    select p.id
+    select p.id, p.skill_level, p.weight_class
     from public.profiles p
     where p.id = auth.uid()
       and p.status = 'active'
@@ -27,6 +27,8 @@ as $$
    and mc.boat_class_id = b.boat_class_id
   where b.status = 'available'
     and mc.clearance_level >= b.required_clearance
+    and public.skill_level_rank(me.skill_level) >= public.skill_level_rank(b.required_skill_level)
+    and (b.weight_class is null or b.weight_class = me.weight_class)
     and p_end_time > p_start_time
     and (p_boat_class_id is null or b.boat_class_id = p_boat_class_id)
     and not exists (

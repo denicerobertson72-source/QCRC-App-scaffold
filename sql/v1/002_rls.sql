@@ -129,6 +129,13 @@ as $$
       select 1
       from clearance_cte c
       where c.clearance_level >= c.required_clearance
+    )
+    and exists(
+      select 1
+      from profile_cte p
+      join boat_cte b on true
+      where public.skill_level_rank(p.skill_level) >= public.skill_level_rank(b.required_skill_level)
+        and (b.weight_class is null or b.weight_class = p.weight_class)
     );
 $$;
 

@@ -1,6 +1,6 @@
 import { TopNav } from "@/components/TopNav";
 import { ReservationForm } from "@/components/ReservationForm";
-import { getAvailableBoats, getBoats } from "@/lib/queries";
+import { getAvailableBoats, getBoats, getMyProfileSummary } from "@/lib/queries";
 import { Card } from "@/components/ui/Card";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { Field } from "@/components/ui/Field";
@@ -32,9 +32,10 @@ export default async function ReservePage({
   const end = params.end ?? toInputDateTime(inTwoHours);
   const boatClassId = params.boatClassId ?? "";
 
-  const [availableBoats, allBoats] = await Promise.all([
+  const [availableBoats, allBoats, profile] = await Promise.all([
     getAvailableBoats(start, end, boatClassId || undefined),
     getBoats(),
+    getMyProfileSummary(),
   ]);
 
   const availableIds = new Set(availableBoats.map((b) => b.id));
@@ -44,7 +45,10 @@ export default async function ReservePage({
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle title="Reserve a Boat" />
+        <PageTitle
+          title="Reserve a Boat"
+          subtitle={`Your profile: ${profile.skill_level} | ${profile.weight_class}`}
+        />
 
         <form method="get" className="card form-grid">
           <Field label="Start">
@@ -80,7 +84,7 @@ export default async function ReservePage({
                   <StatusChip label={boat.status === "available" ? "unavailable" : "out of service"} />
                 </div>
                 <p className="muted">
-                  {boat.boat_class_id} | {boat.boat_type} | clearance {boat.required_clearance}
+                  {boat.boat_class_id} | {boat.boat_type} | clearance {boat.required_clearance} | skill {boat.required_skill_level} | weight {boat.weight_class ?? "Any"}
                 </p>
                 <p>
                   This boat cannot be reserved right now.

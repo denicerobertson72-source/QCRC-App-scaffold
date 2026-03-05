@@ -6,6 +6,7 @@
    - `sql/v1/001_schema.sql`
    - `sql/v1/002_rls.sql`
    - `sql/v1/003_rpc.sql`
+   - `sql/v1/005_skill_weight_model.sql` (adds skill/weight model + matching rules)
 3. Configure Supabase Auth with Email magic link.
 4. Create one admin profile row (same `id` as that user's `auth.users.id`) and set `role = 'admin'`.
 

@@ -118,6 +118,8 @@ export async function updateMemberAdminAction(formData: FormData) {
   const status = String(formData.get("status") ?? "active");
   const membershipType = String(formData.get("membership_type") ?? "community");
   const duesOk = String(formData.get("dues_ok") ?? "false") === "true";
+  const skillLevel = String(formData.get("skill_level") ?? "Beginner");
+  const weightClass = String(formData.get("weight_class") ?? "Mid-weight");
 
   const { error } = await supabase
     .from("profiles")
@@ -126,6 +128,8 @@ export async function updateMemberAdminAction(formData: FormData) {
       status,
       membership_type: membershipType,
       dues_ok: duesOk,
+      skill_level: skillLevel,
+      weight_class: weightClass,
       waiver_signed_at: duesOk ? new Date().toISOString() : null,
     })
     .eq("id", memberId);
@@ -137,16 +141,22 @@ export async function updateMemberAdminAction(formData: FormData) {
 export async function addBoatAdminAction(formData: FormData) {
   const { supabase } = await assertAdmin();
   const name = String(formData.get("name") ?? "");
+  const boatNumber = String(formData.get("boat_number") ?? "");
   const boatClassId = String(formData.get("boat_class_id") ?? "");
   const boatType = String(formData.get("boat_type") ?? "training");
+  const requiredSkillLevel = String(formData.get("required_skill_level") ?? "Beginner");
+  const weightClass = String(formData.get("weight_class") ?? "");
   const requiredClearance = Number(formData.get("required_clearance") ?? 1);
   const status = String(formData.get("status") ?? "available");
   const riggingNotes = String(formData.get("rigging_notes") ?? "");
 
   const { error } = await supabase.from("boats").insert({
     name,
+    boat_number: boatNumber || null,
     boat_class_id: boatClassId,
     boat_type: boatType,
+    required_skill_level: requiredSkillLevel,
+    weight_class: weightClass || null,
     required_clearance: requiredClearance,
     status,
     rigging_notes: riggingNotes || null,

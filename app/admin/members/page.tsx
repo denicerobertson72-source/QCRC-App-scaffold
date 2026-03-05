@@ -11,7 +11,7 @@ export default async function AdminMembersPage() {
   const { supabase } = await ensureProfile();
   const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, status, dues_ok, membership_type")
+    .select("id, full_name, email, role, status, dues_ok, membership_type, skill_level, weight_class")
     .order("full_name");
 
   return (
@@ -62,6 +62,24 @@ export default async function AdminMembersPage() {
                   <select name="dues_ok" defaultValue={m.dues_ok ? "true" : "false"}>
                     <option value="true">paid</option>
                     <option value="false">due</option>
+                  </select>
+                </Field>
+
+                <Field label="Skill Level">
+                  <select name="skill_level" defaultValue={m.skill_level}>
+                    <option value="LTR">LTR</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                    <option value="Elite">Elite</option>
+                  </select>
+                </Field>
+
+                <Field label="Weight Class">
+                  <select name="weight_class" defaultValue={m.weight_class}>
+                    <option value="Lightweight">Lightweight</option>
+                    <option value="Mid-weight">Mid-weight</option>
+                    <option value="Heavyweight">Heavyweight</option>
                   </select>
                 </Field>
 
