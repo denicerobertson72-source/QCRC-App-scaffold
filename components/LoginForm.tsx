@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,21 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [preferPassword, setPreferPassword] = useState(false);
+
+  const storageKey = useMemo(() => {
+    if (!email) return "";
+    return `qcrc-password-login:${email.trim().toLowerCase()}`;
+  }, [email]);
+
+  useEffect(() => {
+    if (!storageKey) {
+      setPreferPassword(false);
+      return;
+    }
+    const stored = window.localStorage.getItem(storageKey);
+    setPreferPassword(stored === "1");
+  }, [storageKey]);
 
   async function sendMagicLink(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -47,6 +62,7 @@ export function LoginForm() {
         setError(signInError.message);
         return;
       }
+      if (storageKey) window.localStorage.setItem(storageKey, "1");
       window.location.href = "/reservations";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected password login error");
@@ -70,6 +86,8 @@ export function LoginForm() {
         setError(signUpError.message);
         return;
       }
+      if (storageKey) window.localStorage.setItem(storageKey, "1");
+      setPreferPassword(true);
       setMessage("Account created. Check your email once to confirm, then you can use password login.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected sign-up error");
@@ -97,7 +115,6 @@ export function LoginForm() {
           placeholder="Use password login after setup"
         />
       </Field>
-      <Button type="submit">Send Magic Link</Button>
       <div className="row">
         <Button type="button" variant="secondary" onClick={signInWithPassword} disabled={!email || !password}>
           Sign In with Password
@@ -106,6 +123,16 @@ export function LoginForm() {
           Create Password Login
         </Button>
       </div>
+      {!preferPassword ? (
+        <Button type="submit">Send Magic Link</Button>
+      ) : (
+        <div className="card-subtle">
+          <p className="muted">Password login enabled for this email on this device.</p>
+          <Button type="submit" variant="secondary">
+            Use Magic Link Instead
+          </Button>
+        </div>
+      )}
       {message ? <p className="success">{message}</p> : null}
       {error ? <p className="error">{error}</p> : null}
     </form>
