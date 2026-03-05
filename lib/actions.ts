@@ -4,6 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensureProfile } from "@/lib/auth";
 
+async function assertAdmin() {
+  const { supabase, user } = await ensureProfile();
+  const { data, error } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (error) throw error;
+  if (!data || (data.role !== "admin" && data.role !== "equipment_manager" && data.role !== "coach")) {
+    throw new Error("Admin permissions required");
+  }
+  return { supabase, user };
+}
+
 function parseCrew(value: FormDataEntryValue | null) {
   if (!value) return [] as string[];
   return String(value)
@@ -99,4 +109,111 @@ export async function signOutAction() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
   redirect("/login");
+}
+
+export async function updateMemberAdminAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const memberId = String(formData.get("member_id") ?? "");
+  const role = String(formData.get("role") ?? "member");
+  const status = String(formData.get("status") ?? "active");
+  const membershipType = String(formData.get("membership_type") ?? "community");
+  const duesOk = String(formData.get("dues_ok") ?? "false") === "true";
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      role,
+      status,
+      membership_type: membershipType,
+      dues_ok: duesOk,
+      waiver_signed_at: duesOk ? new Date().toISOString() : null,
+    })
+    .eq("id", memberId);
+
+  if (error) throw error;
+  revalidatePath("/admin/members");
+}
+
+export async function addBoatAdminAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const name = String(formData.get("name") ?? "");
+  const boatClassId = String(formData.get("boat_class_id") ?? "");
+  const boatType = String(formData.get("boat_type") ?? "training");
+  const requiredClearance = Number(formData.get("required_clearance") ?? 1);
+  const status = String(formData.get("status") ?? "available");
+  const riggingNotes = String(formData.get("rigging_notes") ?? "");
+
+  const { error } = await supabase.from("boats").insert({
+    name,
+    boat_class_id: boatClassId,
+    boat_type: boatType,
+    required_clearance: requiredClearance,
+    status,
+    rigging_notes: riggingNotes || null,
+  });
+
+  if (error) throw error;
+  revalidatePath("/admin/boats");
+  revalidatePath("/boats");
+  revalidatePath("/reserve");
+}
+
+export async function updateBoatStatusAdminAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const boatId = String(formData.get("boat_id") ?? "");
+  const status = String(formData.get("status") ?? "available");
+
+  const { error } = await supabase.from("boats").update({ status }).eq("id", boatId);
+  if (error) throw error;
+
+  revalidatePath("/admin/boats");
+  revalidatePath("/boats");
+  revalidatePath("/reserve");
+}
+
+export async function updateClearanceAdminAction(formData: FormData) {
+  const { supabase, user } = await assertAdmin();
+  const memberId = String(formData.get("member_id") ?? "");
+  const boatClassId = String(formData.get("boat_class_id") ?? "");
+  const clearanceLevel = Number(formData.get("clearance_level") ?? 1);
+
+  const { error } = await supabase.from("member_clearances").upsert(
+    {
+      member_id: memberId,
+      boat_class_id: boatClassId,
+      clearance_level: clearanceLevel,
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+    },
+    { onConflict: "member_id,boat_class_id" },
+  );
+
+  if (error) throw error;
+  revalidatePath("/admin/clearances");
+  revalidatePath("/reserve");
+}
+
+export async function triageDamageAdminAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const damageReportId = String(formData.get("damage_report_id") ?? "");
+  const status = String(formData.get("status") ?? "triaged");
+  const resolutionNotes = String(formData.get("resolution_notes") ?? "");
+  const unlockBoat = String(formData.get("unlock_boat") ?? "false") === "true";
+  const laborCostRaw = String(formData.get("labor_cost") ?? "");
+  const partsCostRaw = String(formData.get("parts_cost") ?? "");
+
+  const { error } = await supabase.rpc("triage_damage_report", {
+    p_damage_report_id: damageReportId,
+    p_status: status,
+    p_resolution_notes: resolutionNotes || null,
+    p_unlock_boat: unlockBoat,
+    p_labor_cost: laborCostRaw ? Number(laborCostRaw) : null,
+    p_parts_cost: partsCostRaw ? Number(partsCostRaw) : null,
+  });
+
+  if (error) throw error;
+  revalidatePath("/admin/damage");
+  revalidatePath("/admin/analytics");
+  revalidatePath("/boats");
+  revalidatePath("/reserve");
 }

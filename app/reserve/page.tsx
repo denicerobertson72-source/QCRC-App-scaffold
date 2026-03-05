@@ -1,10 +1,11 @@
 import { TopNav } from "@/components/TopNav";
 import { ReservationForm } from "@/components/ReservationForm";
-import { getAvailableBoats } from "@/lib/queries";
+import { getAvailableBoats, getBoats } from "@/lib/queries";
 import { Card } from "@/components/ui/Card";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { StatusChip } from "@/components/ui/StatusChip";
 
 type ReserveSearchParams = Promise<{
   start?: string;
@@ -31,7 +32,13 @@ export default async function ReservePage({
   const end = params.end ?? toInputDateTime(inTwoHours);
   const boatClassId = params.boatClassId ?? "";
 
-  const availableBoats = await getAvailableBoats(start, end, boatClassId || undefined);
+  const [availableBoats, allBoats] = await Promise.all([
+    getAvailableBoats(start, end, boatClassId || undefined),
+    getBoats(),
+  ]);
+
+  const availableIds = new Set(availableBoats.map((b) => b.id));
+  const visibleBoats = boatClassId ? allBoats.filter((b) => b.boat_class_id === boatClassId) : allBoats;
 
   return (
     <>
@@ -58,10 +65,30 @@ export default async function ReservePage({
         </form>
 
         <div className="grid">
-          {availableBoats.length === 0 ? <Card subtle>No eligible boats for the selected window.</Card> : null}
-          {availableBoats.map((boat) => (
-            <ReservationForm key={boat.id} boat={boat} start={start} end={end} />
-          ))}
+          {visibleBoats.length === 0 ? <Card subtle>No boats found.</Card> : null}
+
+          {visibleBoats.map((boat) => {
+            const reservable = boat.status === "available" && availableIds.has(boat.id);
+            if (reservable) {
+              return <ReservationForm key={boat.id} boat={boat} start={start} end={end} />;
+            }
+
+            return (
+              <Card key={boat.id} className="stack">
+                <div className="page-title">
+                  <h3>{boat.name}</h3>
+                  <StatusChip label={boat.status === "available" ? "unavailable" : "out of service"} />
+                </div>
+                <p className="muted">
+                  {boat.boat_class_id} | {boat.boat_type} | clearance {boat.required_clearance}
+                </p>
+                <p>
+                  This boat cannot be reserved right now.
+                  {boat.status !== "available" ? " Marked out of service by admin." : " It is unavailable for this time window."}
+                </p>
+              </Card>
+            );
+          })}
         </div>
       </main>
     </>
