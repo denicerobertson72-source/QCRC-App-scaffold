@@ -1,6 +1,17 @@
 import { ensureProfile } from "@/lib/auth";
 import type { Boat, BoatAvailabilityBlock, ProfileSummary, Reservation } from "@/lib/types";
 
+function profileNameFromRelation(profileRelation: unknown) {
+  if (Array.isArray(profileRelation)) {
+    const first = profileRelation[0] as { full_name?: string } | undefined;
+    return first?.full_name ?? "Unknown";
+  }
+  if (profileRelation && typeof profileRelation === "object") {
+    return (profileRelation as { full_name?: string }).full_name ?? "Unknown";
+  }
+  return "Unknown";
+}
+
 export async function getMyReservations() {
   const { supabase, user } = await ensureProfile();
 
@@ -136,7 +147,7 @@ export async function getRosterForBoard(boardType: string, raceEventId?: string)
     if (error) throw error;
     return (data ?? []).map((row) => ({
       id: row.member_id,
-      full_name: Array.isArray(row.profiles) ? row.profiles[0]?.full_name ?? "Unknown" : row.profiles?.full_name ?? "Unknown",
+      full_name: profileNameFromRelation(row.profiles),
     }));
   }
 
@@ -150,7 +161,7 @@ export async function getRosterForBoard(boardType: string, raceEventId?: string)
     if (error) throw error;
     return (data ?? []).map((row) => ({
       id: row.member_id,
-      full_name: Array.isArray(row.profiles) ? row.profiles[0]?.full_name ?? "Unknown" : row.profiles?.full_name ?? "Unknown",
+      full_name: profileNameFromRelation(row.profiles),
     }));
   }
 
@@ -161,7 +172,7 @@ export async function getRosterForBoard(boardType: string, raceEventId?: string)
   if (error) throw error;
   return (data ?? []).map((row) => ({
     id: row.member_id,
-    full_name: Array.isArray(row.profiles) ? row.profiles[0]?.full_name ?? "Unknown" : row.profiles?.full_name ?? "Unknown",
+    full_name: profileNameFromRelation(row.profiles),
   }));
 }
 
