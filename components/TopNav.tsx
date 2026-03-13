@@ -9,6 +9,8 @@ export function TopNav() {
         <span className="topnav-brand">QCRC</span>
         <Link href="/reservations">Reservations</Link>
         <Link href="/reserve">Reserve</Link>
+        <Link href="/programs">Programs</Link>
+        <Link href="/lineups">Lineups</Link>
         <Link href="/boats">Boats</Link>
         <Link href="/damage/new">Damage</Link>
         <Link href="/admin">Admin</Link>

@@ -31,6 +31,18 @@ export default async function AdminPage() {
             <p className="muted">Block all boats (or a class/group) during practice windows.</p>
             <Link href="/admin/availability">Open Availability</Link>
           </Card>
+
+          <Card className="stack">
+            <h3>Lineups</h3>
+            <p className="muted">Build drag-and-drop lineups and publish for members.</p>
+            <Link href="/admin/lineups">Open Lineups</Link>
+          </Card>
+
+          <Card className="stack">
+            <h3>Races</h3>
+            <p className="muted">Create race events and review race signup preferences.</p>
+            <Link href="/admin/races">Open Races</Link>
+          </Card>
         </div>
 
         <div className="row">

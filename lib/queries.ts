@@ -72,3 +72,157 @@ export async function getBoatAvailabilityBlocks() {
   if (error) throw error;
   return (data ?? []) as BoatAvailabilityBlock[];
 }
+
+export async function getProgramSignupState() {
+  const { supabase, user } = await ensureProfile();
+  const { data, error } = await supabase
+    .from("program_signups")
+    .select("program_type, training_group")
+    .eq("member_id", user.id);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getRaceEventsWithMySignup() {
+  const { supabase, user } = await ensureProfile();
+  const { data: events, error: eventsError } = await supabase
+    .from("race_events")
+    .select("id, title, event_date, location, notes")
+    .order("event_date", { ascending: true });
+  if (eventsError) throw eventsError;
+
+  const { data: signups, error: signupsError } = await supabase
+    .from("race_signups")
+    .select("race_event_id, birthdate, wants_1x, wants_2x, wants_4x")
+    .eq("member_id", user.id);
+  if (signupsError) throw signupsError;
+
+  const signupByRace = new Map<string, { birthdate: string; wants_1x: boolean; wants_2x: boolean; wants_4x: boolean }>();
+  for (const signup of signups ?? []) {
+    signupByRace.set(signup.race_event_id, {
+      birthdate: signup.birthdate,
+      wants_1x: signup.wants_1x,
+      wants_2x: signup.wants_2x,
+      wants_4x: signup.wants_4x,
+    });
+  }
+
+  return (events ?? []).map((event) => ({
+    ...event,
+    my_signup: signupByRace.get(event.id) ?? null,
+  }));
+}
+
+export async function getAdminLineupBoards() {
+  const { supabase } = await ensureProfile();
+  const { data, error } = await supabase
+    .from("lineup_boards")
+    .select("id, board_type, race_event_id, title, is_published, published_at")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getRosterForBoard(boardType: string, raceEventId?: string) {
+  const { supabase } = await ensureProfile();
+
+  if (boardType === "racing") {
+    if (!raceEventId) return [];
+    const { data, error } = await supabase
+      .from("race_signups")
+      .select("member_id, profiles(full_name)")
+      .eq("race_event_id", raceEventId);
+    if (error) throw error;
+    return (data ?? []).map((row) => ({
+      id: row.member_id,
+      full_name: Array.isArray(row.profiles) ? row.profiles[0]?.full_name ?? "Unknown" : row.profiles?.full_name ?? "Unknown",
+    }));
+  }
+
+  if (boardType === "coached_training_beginner_intermediate" || boardType === "coached_training_advanced") {
+    const trainingGroup = boardType === "coached_training_beginner_intermediate" ? "beginner_intermediate" : "advanced";
+    const { data, error } = await supabase
+      .from("program_signups")
+      .select("member_id, profiles(full_name)")
+      .eq("program_type", "coached_training")
+      .eq("training_group", trainingGroup);
+    if (error) throw error;
+    return (data ?? []).map((row) => ({
+      id: row.member_id,
+      full_name: Array.isArray(row.profiles) ? row.profiles[0]?.full_name ?? "Unknown" : row.profiles?.full_name ?? "Unknown",
+    }));
+  }
+
+  const { data, error } = await supabase
+    .from("program_signups")
+    .select("member_id, profiles(full_name)")
+    .eq("program_type", "saturday_coached_row");
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.member_id,
+    full_name: Array.isArray(row.profiles) ? row.profiles[0]?.full_name ?? "Unknown" : row.profiles?.full_name ?? "Unknown",
+  }));
+}
+
+export async function getLineupBoardDetail(lineupBoardId: string) {
+  const { supabase } = await ensureProfile();
+
+  const { data: board, error: boardError } = await supabase
+    .from("lineup_boards")
+    .select("id, board_type, race_event_id, title, is_published")
+    .eq("id", lineupBoardId)
+    .single();
+  if (boardError) throw boardError;
+
+  const { data: boats, error: boatError } = await supabase
+    .from("lineup_boats")
+    .select("id, lineup_board_id, boat_name, boat_class_id, sort_order")
+    .eq("lineup_board_id", lineupBoardId)
+    .order("sort_order", { ascending: true });
+  if (boatError) throw boatError;
+
+  const boatIds = (boats ?? []).map((b) => b.id);
+  const seats = boatIds.length
+    ? await (async () => {
+        const { data: seatData, error: seatError } = await supabase
+          .from("lineup_seats")
+          .select("id, lineup_boat_id, seat_number, member_id, profiles(full_name)")
+          .in("lineup_boat_id", boatIds)
+          .order("seat_number", { ascending: true });
+        if (seatError) throw seatError;
+        return seatData ?? [];
+      })()
+    : [];
+
+  const seatsByBoat = new Map<string, typeof seats>();
+  for (const seat of seats) {
+    const existing = seatsByBoat.get(seat.lineup_boat_id) ?? [];
+    existing.push(seat);
+    seatsByBoat.set(seat.lineup_boat_id, existing);
+  }
+
+  return {
+    board,
+    boats: (boats ?? []).map((boat) => ({
+      ...boat,
+      seats: (seatsByBoat.get(boat.id) ?? []).map((seat) => ({
+        id: seat.id,
+        seat_number: seat.seat_number,
+        member_id: seat.member_id,
+        member_name: Array.isArray(seat.profiles) ? seat.profiles[0]?.full_name ?? null : seat.profiles?.full_name ?? null,
+      })),
+    })),
+  };
+}
+
+export async function getPublishedLineups() {
+  const { supabase } = await ensureProfile();
+  const { data, error } = await supabase
+    .from("lineup_boards")
+    .select("id, board_type, race_event_id, title, is_published, race_events(title,event_date)")
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}

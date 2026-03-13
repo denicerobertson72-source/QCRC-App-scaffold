@@ -31,3 +31,13 @@ export async function ensureProfile() {
 
   return { supabase, user };
 }
+
+export async function ensureAdminProfile() {
+  const { supabase, user } = await ensureProfile();
+  const { data, error } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (error) throw error;
+  if (!data || (data.role !== "admin" && data.role !== "coach" && data.role !== "equipment_manager")) {
+    redirect("/reservations");
+  }
+  return { supabase, user };
+}
