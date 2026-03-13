@@ -30,11 +30,13 @@ export default async function LineupsPage() {
             boards.map(async (board) => {
               const detail = await getLineupBoardDetail(board.id);
               const race = Array.isArray(board.race_events) ? board.race_events[0] : board.race_events;
+              const session = Array.isArray(board.sessions) ? board.sessions[0] : board.sessions;
 
               return (
                 <Card key={board.id} className="stack">
                   <h3>{board.title}</h3>
                   {race ? <p className="muted">{race.title} | {race.event_date}</p> : null}
+                  {session ? <p className="muted">{new Date(session.starts_at).toLocaleString("en-US")}</p> : null}
 
                   <div className="grid">
                     {detail.boats.map((boat) => (
@@ -42,6 +44,9 @@ export default async function LineupsPage() {
                         <h4>
                           {boat.boat_name} ({boat.boat_class_id})
                         </h4>
+                        {"race_time" in boat && boat.race_time ? (
+                          <p className="muted">Race time: {new Date(String(boat.race_time)).toLocaleString("en-US")}</p>
+                        ) : null}
                         <ul>
                           {boat.seats.map((seat) => (
                             <li key={seat.id}>

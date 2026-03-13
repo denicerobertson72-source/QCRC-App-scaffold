@@ -129,14 +129,26 @@ export async function getAdminLineupBoards() {
   const { supabase } = await ensureProfile();
   const { data, error } = await supabase
     .from("lineup_boards")
-    .select("id, board_type, race_event_id, title, is_published, published_at")
+    .select("id, board_type, race_event_id, session_id, title, is_published, published_at")
     .order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function getRosterForBoard(boardType: string, raceEventId?: string) {
+export async function getRosterForBoard(boardType: string, raceEventId?: string, sessionId?: string) {
   const { supabase } = await ensureProfile();
+
+  if (sessionId) {
+    const { data, error } = await supabase
+      .from("session_signups")
+      .select("member_id, profiles(full_name)")
+      .eq("session_id", sessionId);
+    if (error) throw error;
+    return (data ?? []).map((row) => ({
+      id: row.member_id,
+      full_name: profileNameFromRelation(row.profiles),
+    }));
+  }
 
   if (boardType === "racing") {
     if (!raceEventId) return [];
@@ -181,14 +193,14 @@ export async function getLineupBoardDetail(lineupBoardId: string) {
 
   const { data: board, error: boardError } = await supabase
     .from("lineup_boards")
-    .select("id, board_type, race_event_id, title, is_published")
+    .select("id, board_type, race_event_id, session_id, title, is_published")
     .eq("id", lineupBoardId)
     .single();
   if (boardError) throw boardError;
 
   const { data: boats, error: boatError } = await supabase
     .from("lineup_boats")
-    .select("id, lineup_board_id, boat_name, boat_class_id, sort_order")
+    .select("id, lineup_board_id, boat_name, boat_class_id, race_time, sort_order")
     .eq("lineup_board_id", lineupBoardId)
     .order("sort_order", { ascending: true });
   if (boatError) throw boatError;
@@ -231,7 +243,7 @@ export async function getPublishedLineups() {
   const { supabase } = await ensureProfile();
   const { data, error } = await supabase
     .from("lineup_boards")
-    .select("id, board_type, race_event_id, title, is_published, race_events(title,event_date)")
+    .select("id, board_type, race_event_id, session_id, title, is_published, race_events(title,event_date), sessions(starts_at)")
     .eq("is_published", true)
     .order("created_at", { ascending: false });
   if (error) throw error;

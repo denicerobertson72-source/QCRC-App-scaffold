@@ -425,11 +425,14 @@ export async function createLineupBoardAdminAction(formData: FormData) {
   const { supabase, user } = await assertAdmin();
   const boardType = String(formData.get("board_type") ?? "");
   const raceEventId = String(formData.get("race_event_id") ?? "");
+  const sessionId = String(formData.get("session_id") ?? "");
   const title = String(formData.get("title") ?? "");
+  const returnTo = String(formData.get("return_to") ?? "");
 
   const payload = {
     board_type: boardType,
     race_event_id: raceEventId || null,
+    session_id: sessionId || null,
     title,
     created_by: user.id,
   };
@@ -439,6 +442,7 @@ export async function createLineupBoardAdminAction(formData: FormData) {
 
   revalidatePath("/admin/lineups");
   revalidatePath("/admin/races");
+  if (returnTo) redirect(returnTo);
 }
 
 function seatCountFromClass(boatClassId: string) {
@@ -452,6 +456,7 @@ export async function addLineupBoatAdminAction(formData: FormData) {
   const lineupBoardId = String(formData.get("lineup_board_id") ?? "");
   const boatName = String(formData.get("boat_name") ?? "");
   const boatClassId = String(formData.get("boat_class_id") ?? "4x");
+  const returnTo = String(formData.get("return_to") ?? "");
 
   const { data: existingBoats, error: existingError } = await supabase
     .from("lineup_boats")
@@ -486,11 +491,13 @@ export async function addLineupBoatAdminAction(formData: FormData) {
 
   revalidatePath("/admin/lineups");
   revalidatePath("/admin/races");
+  if (returnTo) redirect(returnTo);
 }
 
 export async function saveLineupAssignmentsAdminAction(formData: FormData) {
   const { supabase } = await assertAdmin();
   const assignmentJson = String(formData.get("assignments_json") ?? "[]");
+  const returnTo = String(formData.get("return_to") ?? "");
   const assignments = JSON.parse(assignmentJson) as { seatId: string; memberId: string | null }[];
 
   for (const item of assignments) {
@@ -504,12 +511,14 @@ export async function saveLineupAssignmentsAdminAction(formData: FormData) {
   revalidatePath("/admin/lineups");
   revalidatePath("/admin/races");
   revalidatePath("/lineups");
+  if (returnTo) redirect(returnTo);
 }
 
 export async function publishLineupBoardAdminAction(formData: FormData) {
   const { supabase } = await assertAdmin();
   const lineupBoardId = String(formData.get("lineup_board_id") ?? "");
   const publish = String(formData.get("publish") ?? "true") === "true";
+  const returnTo = String(formData.get("return_to") ?? "");
 
   const { error } = await supabase
     .from("lineup_boards")
@@ -523,6 +532,26 @@ export async function publishLineupBoardAdminAction(formData: FormData) {
   revalidatePath("/admin/lineups");
   revalidatePath("/admin/races");
   revalidatePath("/lineups");
+  if (returnTo) redirect(returnTo);
+}
+
+export async function updateLineupBoatRaceTimeAdminAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const lineupBoatId = String(formData.get("lineup_boat_id") ?? "");
+  const raceTime = String(formData.get("race_time") ?? "");
+  const returnTo = String(formData.get("return_to") ?? "");
+  const raceTimeIso = raceTime ? new Date(raceTime).toISOString() : null;
+
+  const { error } = await supabase
+    .from("lineup_boats")
+    .update({ race_time: raceTimeIso })
+    .eq("id", lineupBoatId);
+  if (error) throw error;
+
+  revalidatePath("/admin/races");
+  revalidatePath("/admin/lineups");
+  revalidatePath("/lineups");
+  if (returnTo) redirect(returnTo);
 }
 
 export async function toggleSessionSignupAction(formData: FormData) {
@@ -550,6 +579,8 @@ export async function toggleSessionSignupAction(formData: FormData) {
 
   revalidatePath("/programs/saturday");
   revalidatePath("/programs/training");
+  revalidatePath("/programs/training/beginner-intermediate");
+  revalidatePath("/programs/training/advanced");
   revalidatePath("/admin/programs");
 }
 
@@ -570,6 +601,8 @@ export async function cancelSessionAdminAction(formData: FormData) {
 
   revalidatePath("/programs/saturday");
   revalidatePath("/programs/training");
+  revalidatePath("/programs/training/beginner-intermediate");
+  revalidatePath("/programs/training/advanced");
   revalidatePath("/admin/programs");
 }
 
@@ -585,8 +618,30 @@ function monthWindowFromInput(monthInput: string) {
   return { start, end };
 }
 
-function toIsoUtc(year: number, monthIndex: number, day: number, hour: number, minute: number) {
-  return new Date(Date.UTC(year, monthIndex, day, hour, minute, 0)).toISOString();
+function getEasternOffsetMinutes(instant: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    timeZoneName: "shortOffset",
+  }).formatToParts(instant);
+  const value = parts.find((part) => part.type === "timeZoneName")?.value ?? "GMT-5";
+  const match = value.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) return -300;
+  const sign = match[1] === "-" ? -1 : 1;
+  const hours = Number(match[2]);
+  const minutes = Number(match[3] ?? "0");
+  return sign * (hours * 60 + minutes);
+}
+
+function toEasternLocalIso(year: number, monthIndex: number, day: number, hour: number, minute: number) {
+  const localWallMs = Date.UTC(year, monthIndex, day, hour, minute, 0);
+  let guess = new Date(localWallMs);
+  for (let i = 0; i < 2; i += 1) {
+    const offsetMinutes = getEasternOffsetMinutes(guess);
+    const corrected = new Date(localWallMs - offsetMinutes * 60 * 1000);
+    if (corrected.getTime() === guess.getTime()) break;
+    guess = corrected;
+  }
+  return guess.toISOString();
 }
 
 export async function generateProgramSessionsMonthAction(formData: FormData) {
@@ -625,14 +680,14 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
     const dayOfWeek = date.getUTCDay();
 
     if (dayOfWeek === 6) {
-      const startsAt = toIsoUtc(year, monthIndex, day, 13, 0); // 8:00 AM ET approximation in UTC
+      const startsAt = toEasternLocalIso(year, monthIndex, day, 8, 0);
       const key = `saturday_coached_row|${new Date(startsAt).toISOString()}`;
       if (!existingKeys.has(key)) {
         rows.push({
           title: "Saturday Coached Row",
           session_type: "saturday_coached_row",
           starts_at: startsAt,
-          ends_at: toIsoUtc(year, monthIndex, day, 14, 30),
+          ends_at: toEasternLocalIso(year, monthIndex, day, 9, 30),
           created_by: user.id,
           is_cancelled: false,
         });
@@ -640,14 +695,14 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
     }
 
     if (dayOfWeek === 1 || dayOfWeek === 4) {
-      const startsAt = toIsoUtc(year, monthIndex, day, 22, 30); // 5:30 PM ET approximation in UTC
+      const startsAt = toEasternLocalIso(year, monthIndex, day, 17, 30);
       const key = `coached_training_beginner_intermediate|${new Date(startsAt).toISOString()}`;
       if (!existingKeys.has(key)) {
         rows.push({
           title: "Coached Training (Beginner/Intermediate)",
           session_type: "coached_training_beginner_intermediate",
           starts_at: startsAt,
-          ends_at: toIsoUtc(year, monthIndex, day, 23, 45),
+          ends_at: toEasternLocalIso(year, monthIndex, day, 18, 45),
           created_by: user.id,
           is_cancelled: false,
         });
@@ -655,14 +710,14 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
     }
 
     if (dayOfWeek === 2 || dayOfWeek === 4) {
-      const startsAt = toIsoUtc(year, monthIndex, day, 11, 30); // 6:30 AM ET approximation in UTC
+      const startsAt = toEasternLocalIso(year, monthIndex, day, 6, 30);
       const key = `coached_training_advanced|${new Date(startsAt).toISOString()}`;
       if (!existingKeys.has(key)) {
         rows.push({
           title: "Coached Training (Advanced)",
           session_type: "coached_training_advanced",
           starts_at: startsAt,
-          ends_at: toIsoUtc(year, monthIndex, day, 12, 45),
+          ends_at: toEasternLocalIso(year, monthIndex, day, 7, 45),
           created_by: user.id,
           is_cancelled: false,
         });
@@ -677,5 +732,32 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
 
   revalidatePath("/programs/saturday");
   revalidatePath("/programs/training");
+  revalidatePath("/programs/training/beginner-intermediate");
+  revalidatePath("/programs/training/advanced");
+  revalidatePath("/admin/programs");
+}
+
+export async function updateSessionTimesAdminAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const sessionId = String(formData.get("session_id") ?? "");
+  const startsAt = String(formData.get("starts_at") ?? "");
+  const endsAt = String(formData.get("ends_at") ?? "");
+
+  const startsAtIso = startsAt ? new Date(startsAt).toISOString() : null;
+  const endsAtIso = endsAt ? new Date(endsAt).toISOString() : null;
+
+  const { error } = await supabase
+    .from("sessions")
+    .update({
+      starts_at: startsAtIso,
+      ends_at: endsAtIso,
+    })
+    .eq("id", sessionId);
+  if (error) throw error;
+
+  revalidatePath("/programs/saturday");
+  revalidatePath("/programs/training");
+  revalidatePath("/programs/training/beginner-intermediate");
+  revalidatePath("/programs/training/advanced");
   revalidatePath("/admin/programs");
 }

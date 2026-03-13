@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { ensureAdminProfile } from "@/lib/auth";
 import { PageTitle } from "@/components/ui/PageTitle";
@@ -10,49 +11,57 @@ import {
   createLineupBoardAdminAction,
   publishLineupBoardAdminAction,
   saveLineupAssignmentsAdminAction,
-  updateLineupBoatRaceTimeAdminAction,
 } from "@/lib/actions";
 import { getLineupBoardDetail, getRosterForBoard } from "@/lib/queries";
 
-export default async function RaceLineupPage({ params }: { params: Promise<{ raceId: string }> }) {
-  const { raceId } = await params;
+function boardTypeForSession(sessionType: string) {
+  if (sessionType === "coached_training_beginner_intermediate") return "coached_training_beginner_intermediate";
+  if (sessionType === "coached_training_advanced") return "coached_training_advanced";
+  return "saturday_coached_row";
+}
+
+export default async function SessionLineupPage({ params }: { params: Promise<{ sessionId: string }> }) {
+  const { sessionId } = await params;
   const { supabase } = await ensureAdminProfile();
-  const returnTo = `/admin/races/${raceId}/lineup`;
+  const returnTo = `/admin/lineups/session/${sessionId}`;
 
-  const { data: race } = await supabase.from("race_events").select("id, title, event_date").eq("id", raceId).maybeSingle();
-
-  const { data: board } = await supabase
-    .from("lineup_boards")
-    .select("id, title, is_published")
-    .eq("board_type", "racing")
-    .eq("race_event_id", raceId)
-    .order("created_at", { ascending: true })
-    .limit(1)
+  const { data: session } = await supabase
+    .from("sessions")
+    .select("id, title, starts_at, session_type")
+    .eq("id", sessionId)
     .maybeSingle();
 
-  if (!race) {
+  if (!session) {
     return (
       <>
         <TopNav />
         <main className="stack">
-          <Card>Race not found.</Card>
+          <Card>Session not found.</Card>
         </main>
       </>
     );
   }
+
+  const boardType = boardTypeForSession(session.session_type);
+  const { data: board } = await supabase
+    .from("lineup_boards")
+    .select("id, title, is_published")
+    .eq("session_id", session.id)
+    .limit(1)
+    .maybeSingle();
 
   if (!board) {
     return (
       <>
         <TopNav />
         <main className="stack">
-          <PageTitle title={`Race Lineup: ${race.title}`} subtitle={race.event_date} />
+          <PageTitle title={`Session Lineup: ${session.title}`} subtitle={new Date(session.starts_at).toLocaleString("en-US")} />
           <form action={createLineupBoardAdminAction} className="card form-grid">
-            <input type="hidden" name="board_type" value="racing" />
-            <input type="hidden" name="race_event_id" value={race.id} />
-            <input type="hidden" name="title" value={`${race.title} Lineup`} />
+            <input type="hidden" name="board_type" value={boardType} />
+            <input type="hidden" name="session_id" value={session.id} />
+            <input type="hidden" name="title" value={`${session.title} Lineup`} />
             <input type="hidden" name="return_to" value={returnTo} />
-            <Button type="submit">Create Race Lineup Board</Button>
+            <Button type="submit">Create Session Lineup</Button>
           </form>
         </main>
       </>
@@ -60,13 +69,17 @@ export default async function RaceLineupPage({ params }: { params: Promise<{ rac
   }
 
   const detail = await getLineupBoardDetail(board.id);
-  const roster = await getRosterForBoard("racing", race.id);
+  const roster = await getRosterForBoard(boardType, undefined, session.id);
 
   return (
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle title={`Race Lineup: ${race.title}`} subtitle={race.event_date} />
+        <PageTitle title={`Session Lineup: ${session.title}`} subtitle={new Date(session.starts_at).toLocaleString("en-US")} />
+
+        <div className="row">
+          <Link href="/admin/lineups">Back to Lineups</Link>
+        </div>
 
         <Card className="stack">
           <div className="page-title">
@@ -97,30 +110,10 @@ export default async function RaceLineupPage({ params }: { params: Promise<{ rac
             <Button type="submit">Add Boat</Button>
           </form>
 
-          <div className="stack">
-            {detail.boats.map((boat) => (
-              <form key={boat.id} action={updateLineupBoatRaceTimeAdminAction} className="inline-form">
-                <input type="hidden" name="lineup_boat_id" value={boat.id} />
-                <input type="hidden" name="return_to" value={returnTo} />
-                <Field label={`${boat.boat_name} race time`}>
-                  <input
-                    name="race_time"
-                    type="datetime-local"
-                    defaultValue={boat.race_time ? new Date(String(boat.race_time)).toISOString().slice(0, 16) : ""}
-                  />
-                </Field>
-                <Button type="submit" variant="secondary">
-                  Save Time
-                </Button>
-              </form>
-            ))}
-          </div>
-
           <LineupBuilder
             boats={detail.boats}
             roster={roster}
             action={saveLineupAssignmentsAdminAction}
-            allowMultiSeat
             returnTo={returnTo}
           />
         </Card>

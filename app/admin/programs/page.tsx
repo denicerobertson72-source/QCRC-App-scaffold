@@ -5,7 +5,7 @@ import { PageTitle } from "@/components/ui/PageTitle";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
-import { cancelSessionAdminAction, generateProgramSessionsMonthAction } from "@/lib/actions";
+import { cancelSessionAdminAction, generateProgramSessionsMonthAction, updateSessionTimesAdminAction } from "@/lib/actions";
 
 type SearchParams = Promise<{ month?: string }>;
 
@@ -45,7 +45,7 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
 
   const { data: sessions } = await supabase
     .from("sessions")
-    .select("id, title, session_type, starts_at, is_cancelled, cancelled_reason")
+    .select("id, title, session_type, starts_at, ends_at, is_cancelled, cancelled_reason")
     .in("session_type", [
       "saturday_coached_row",
       "coached_training_beginner_intermediate",
@@ -81,6 +81,19 @@ export default async function AdminProgramsPage({ searchParams }: { searchParams
               </div>
 
               {session.is_cancelled ? <p className="error">Cancelled: {session.cancelled_reason ?? "No reason"}</p> : null}
+
+              <form action={updateSessionTimesAdminAction} className="form-grid">
+                <input type="hidden" name="session_id" value={session.id} />
+                <Field label="Start (ET local input)">
+                  <input name="starts_at" type="datetime-local" defaultValue={session.starts_at.slice(0, 16)} />
+                </Field>
+                <Field label="End (ET local input)">
+                  <input name="ends_at" type="datetime-local" defaultValue={session.ends_at.slice(0, 16)} />
+                </Field>
+                <Button type="submit" variant="secondary">
+                  Save Time
+                </Button>
+              </form>
 
               <form action={cancelSessionAdminAction} className="form-grid">
                 <input type="hidden" name="session_id" value={session.id} />

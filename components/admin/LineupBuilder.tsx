@@ -37,10 +37,14 @@ export function LineupBuilder({
   boats,
   roster,
   action,
+  allowMultiSeat = false,
+  returnTo,
 }: {
   boats: Boat[];
   roster: RosterMember[];
   action: (formData: FormData) => void;
+  allowMultiSeat?: boolean;
+  returnTo?: string;
 }) {
   const [localBoats, setLocalBoats] = useState<Boat[]>(boats);
 
@@ -54,17 +58,19 @@ export function LineupBuilder({
     return ids;
   }, [localBoats]);
 
-  const unassigned = roster.filter((member) => !assignedMemberIds.has(member.id));
+  const unassigned = allowMultiSeat ? roster : roster.filter((member) => !assignedMemberIds.has(member.id));
 
   function onDropMember(seatId: string, memberId: string) {
     setLocalBoats((prev) => {
       const next = prev.map((boat) => ({ ...boat, seats: boat.seats.map((seat) => ({ ...seat })) }));
 
-      for (const boat of next) {
-        for (const seat of boat.seats) {
-          if (seat.member_id === memberId) {
-            seat.member_id = null;
-            seat.member_name = null;
+      if (!allowMultiSeat) {
+        for (const boat of next) {
+          for (const seat of boat.seats) {
+            if (seat.member_id === memberId) {
+              seat.member_id = null;
+              seat.member_name = null;
+            }
           }
         }
       }
@@ -158,6 +164,7 @@ export function LineupBuilder({
 
       <form action={action} className="inline-form">
         <input type="hidden" name="assignments_json" value={assignmentsJson} />
+        {returnTo ? <input type="hidden" name="return_to" value={returnTo} /> : null}
         <Button type="submit">Save Lineup Assignments</Button>
       </form>
     </div>
