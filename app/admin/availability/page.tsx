@@ -7,11 +7,10 @@ import {
   updateBoatAvailabilityBlockAdminAction,
 } from "@/lib/actions";
 import { getBoatAvailabilityBlocks } from "@/lib/queries";
+import { toEasternDateTimeLocalValue } from "@/lib/time";
 
 function toInputDateTime(value: string) {
-  const date = new Date(value);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return toEasternDateTimeLocalValue(value);
 }
 
 export default async function AdminAvailabilityPage() {

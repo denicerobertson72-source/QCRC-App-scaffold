@@ -589,6 +589,9 @@ export async function toggleSessionSignupAction(formData: FormData) {
   revalidatePath("/programs/training/beginner-intermediate");
   revalidatePath("/programs/training/advanced");
   revalidatePath("/admin/programs");
+  revalidatePath("/admin/programs/saturday");
+  revalidatePath("/admin/programs/training-beginner-intermediate");
+  revalidatePath("/admin/programs/training-advanced");
 }
 
 export async function cancelSessionAdminAction(formData: FormData) {
@@ -611,6 +614,9 @@ export async function cancelSessionAdminAction(formData: FormData) {
   revalidatePath("/programs/training/beginner-intermediate");
   revalidatePath("/programs/training/advanced");
   revalidatePath("/admin/programs");
+  revalidatePath("/admin/programs/saturday");
+  revalidatePath("/admin/programs/training-beginner-intermediate");
+  revalidatePath("/admin/programs/training-advanced");
 }
 
 function monthWindowFromInput(monthInput: string) {
@@ -662,7 +668,7 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
 
     if (dayOfWeek === 6) {
       const startsAt = easternLocalInputToIso(
-        `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T08:00`,
+        `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T08:30`,
       ) as string;
       const key = `saturday_coached_row|${new Date(startsAt).toISOString()}`;
       if (!existingKeys.has(key)) {
@@ -671,7 +677,7 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
           session_type: "saturday_coached_row",
           starts_at: startsAt,
           ends_at: easternLocalInputToIso(
-            `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T09:30`,
+            `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T10:00`,
           ) as string,
           created_by: user.id,
           is_cancelled: false,
@@ -728,6 +734,64 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
   revalidatePath("/programs/training/beginner-intermediate");
   revalidatePath("/programs/training/advanced");
   revalidatePath("/admin/programs");
+  revalidatePath("/admin/programs/saturday");
+  revalidatePath("/admin/programs/training-beginner-intermediate");
+  revalidatePath("/admin/programs/training-advanced");
+}
+
+function defaultSessionTimesByType(sessionType: string) {
+  if (sessionType === "saturday_coached_row") {
+    return { start: "08:30", end: "10:00" };
+  }
+  if (sessionType === "coached_training_beginner_intermediate") {
+    return { start: "17:30", end: "18:45" };
+  }
+  return { start: "06:30", end: "07:45" };
+}
+
+export async function resetProgramMonthToDefaultTimesAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const monthInput = String(formData.get("month") ?? "");
+  const sessionType = String(formData.get("session_type") ?? "");
+  const { start, end } = monthWindowFromInput(monthInput);
+  const times = defaultSessionTimesByType(sessionType);
+
+  const { data: sessions, error } = await supabase
+    .from("sessions")
+    .select("id, starts_at")
+    .eq("session_type", sessionType)
+    .gte("starts_at", start.toISOString())
+    .lt("starts_at", end.toISOString());
+  if (error) throw error;
+
+  for (const session of sessions ?? []) {
+    const local = new Date(session.starts_at).toLocaleString("sv-SE", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const [datePart] = local.split(" ");
+    const startsAtIso = easternLocalInputToIso(`${datePart}T${times.start}`);
+    const endsAtIso = easternLocalInputToIso(`${datePart}T${times.end}`);
+    const { error: updateError } = await supabase
+      .from("sessions")
+      .update({ starts_at: startsAtIso, ends_at: endsAtIso })
+      .eq("id", session.id);
+    if (updateError) throw updateError;
+  }
+
+  revalidatePath("/programs/saturday");
+  revalidatePath("/programs/training");
+  revalidatePath("/programs/training/beginner-intermediate");
+  revalidatePath("/programs/training/advanced");
+  revalidatePath("/admin/programs");
+  revalidatePath("/admin/programs/saturday");
+  revalidatePath("/admin/programs/training-beginner-intermediate");
+  revalidatePath("/admin/programs/training-advanced");
 }
 
 export async function updateSessionTimesAdminAction(formData: FormData) {
