@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { LineupBuilder } from "@/components/admin/LineupBuilder";
+import { formatEasternDateTime } from "@/lib/time";
 import {
   addLineupBoatAdminAction,
   createLineupBoardAdminAction,
@@ -55,7 +56,7 @@ export default async function SessionLineupPage({ params }: { params: Promise<{ 
       <>
         <TopNav />
         <main className="stack">
-          <PageTitle title={`Session Lineup: ${session.title}`} subtitle={new Date(session.starts_at).toLocaleString("en-US")} />
+          <PageTitle title={`Session Lineup: ${session.title}`} subtitle={`${formatEasternDateTime(session.starts_at)} ET`} />
           <form action={createLineupBoardAdminAction} className="card form-grid">
             <input type="hidden" name="board_type" value={boardType} />
             <input type="hidden" name="session_id" value={session.id} />
@@ -75,7 +76,7 @@ export default async function SessionLineupPage({ params }: { params: Promise<{ 
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle title={`Session Lineup: ${session.title}`} subtitle={new Date(session.starts_at).toLocaleString("en-US")} />
+        <PageTitle title={`Session Lineup: ${session.title}`} subtitle={`${formatEasternDateTime(session.starts_at)} ET`} />
 
         <div className="row">
           <Link href="/admin/lineups">Back to Lineups</Link>

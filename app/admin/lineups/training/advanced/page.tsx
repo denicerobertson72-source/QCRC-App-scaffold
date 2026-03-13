@@ -3,6 +3,7 @@ import { TopNav } from "@/components/TopNav";
 import { ensureAdminProfile } from "@/lib/auth";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { Card } from "@/components/ui/Card";
+import { formatEasternDateTime, formatEasternMonthLabel } from "@/lib/time";
 
 type SearchParams = Promise<{ month?: string }>;
 
@@ -17,7 +18,7 @@ function monthBounds(monthInput?: string) {
   const end = new Date(Date.UTC(safeYear, safeMonthIndex + 1, 1));
   const prev = new Date(Date.UTC(safeYear, safeMonthIndex - 1, 1));
   const next = new Date(Date.UTC(safeYear, safeMonthIndex + 1, 1));
-  const label = start.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  const label = formatEasternMonthLabel(start);
   const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
   return { start, end, label, prev: fmt(prev), next: fmt(next) };
 }
@@ -50,7 +51,7 @@ export default async function AdminTrainingAdvancedLineupsPage({ searchParams }:
           {(sessions ?? []).map((session) => (
             <Card key={session.id} className="page-title">
               <div>
-                <h3>{new Date(session.starts_at).toLocaleString("en-US")}</h3>
+                <h3>{formatEasternDateTime(session.starts_at)} ET</h3>
                 {session.is_cancelled ? <p className="error">Cancelled</p> : null}
               </div>
               <Link href={`/admin/lineups/session/${session.id}`}>Open Lineup</Link>

@@ -6,6 +6,7 @@ import { StatusChip } from "@/components/ui/StatusChip";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { triageDamageAdminAction } from "@/lib/actions";
+import { formatEasternDateTime } from "@/lib/time";
 
 export default async function AdminDamagePage() {
   const { supabase } = await ensureProfile();
@@ -33,7 +34,7 @@ export default async function AdminDamagePage() {
                 <strong>Severity {item.severity}</strong>
               </p>
               <p>{item.description}</p>
-              <p className="muted">{new Date(item.reported_at).toLocaleString()}</p>
+              <p className="muted">{formatEasternDateTime(item.reported_at)} ET</p>
 
               <form action={triageDamageAdminAction} className="form-grid">
                 <input type="hidden" name="damage_report_id" value={item.id} />

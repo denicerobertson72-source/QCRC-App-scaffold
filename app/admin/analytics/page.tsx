@@ -2,6 +2,7 @@ import { TopNav } from "@/components/TopNav";
 import { ensureProfile } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import { PageTitle } from "@/components/ui/PageTitle";
+import { formatEasternDate, formatEasternDateTime } from "@/lib/time";
 
 export default async function AdminAnalyticsPage() {
   const { supabase } = await ensureProfile();
@@ -42,7 +43,7 @@ export default async function AdminAnalyticsPage() {
               {(usage ?? []).map((row: any, idx: number) => (
                 <tr key={`${row.boat_name}-${idx}`}>
                   <td>{row.boat_name}</td>
-                  <td>{new Date(row.usage_month).toLocaleDateString()}</td>
+                  <td>{formatEasternDate(row.usage_month)}</td>
                   <td>{Number(row.reserved_hours ?? 0).toFixed(1)}</td>
                   <td>{Number(row.on_water_hours ?? 0).toFixed(1)}</td>
                 </tr>
@@ -68,7 +69,7 @@ export default async function AdminAnalyticsPage() {
                   <td>{row.boat_name}</td>
                   <td>{row.damage_reports}</td>
                   <td>{row.avg_severity ?? "-"}</td>
-                  <td>{row.last_reported_at ? new Date(row.last_reported_at).toLocaleString() : "-"}</td>
+                  <td>{row.last_reported_at ? `${formatEasternDateTime(row.last_reported_at)} ET` : "-"}</td>
                 </tr>
               ))}
             </tbody>

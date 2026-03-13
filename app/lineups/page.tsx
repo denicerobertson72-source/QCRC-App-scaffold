@@ -2,6 +2,7 @@ import { TopNav } from "@/components/TopNav";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { Card } from "@/components/ui/Card";
 import { getLineupBoardDetail, getPublishedLineups } from "@/lib/queries";
+import { formatEasternDateTime } from "@/lib/time";
 
 function seatLabel(boatClassId: string, seatNumber: number) {
   if (boatClassId === "1x") return "Sculler";
@@ -36,7 +37,7 @@ export default async function LineupsPage() {
                 <Card key={board.id} className="stack">
                   <h3>{board.title}</h3>
                   {race ? <p className="muted">{race.title} | {race.event_date}</p> : null}
-                  {session ? <p className="muted">{new Date(session.starts_at).toLocaleString("en-US")}</p> : null}
+                  {session ? <p className="muted">{formatEasternDateTime(session.starts_at)} ET</p> : null}
 
                   <div className="grid">
                     {detail.boats.map((boat) => (
@@ -45,7 +46,7 @@ export default async function LineupsPage() {
                           {boat.boat_name} ({boat.boat_class_id})
                         </h4>
                         {"race_time" in boat && boat.race_time ? (
-                          <p className="muted">Race time: {new Date(String(boat.race_time)).toLocaleString("en-US")}</p>
+                          <p className="muted">Race time: {formatEasternDateTime(String(boat.race_time))} ET</p>
                         ) : null}
                         <ul>
                           {boat.seats.map((seat) => (

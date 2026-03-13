@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { getProgramSessionsForMonth } from "@/lib/queries";
 import { toggleSessionSignupAction } from "@/lib/actions";
+import { formatEasternDateTime, formatEasternMonthLabel } from "@/lib/time";
 
 type SearchParams = Promise<{ month?: string }>;
 
@@ -21,20 +22,14 @@ function monthBounds(monthInput?: string) {
   const prev = new Date(Date.UTC(safeYear, safeMonthIndex - 1, 1, 0, 0, 0));
   const next = new Date(Date.UTC(safeYear, safeMonthIndex + 1, 1, 0, 0, 0));
 
-  const label = start.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  const label = formatEasternMonthLabel(start);
   const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 
   return { start, end, label, prev: fmt(prev), next: fmt(next) };
 }
 
 function prettyDateTime(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return `${formatEasternDateTime(value)} ET`;
 }
 
 export default async function TrainingBIPage({ searchParams }: { searchParams: SearchParams }) {

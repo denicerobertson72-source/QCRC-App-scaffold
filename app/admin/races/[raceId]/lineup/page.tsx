@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { LineupBuilder } from "@/components/admin/LineupBuilder";
+import { toEasternDateTimeLocalValue } from "@/lib/time";
 import {
   addLineupBoatAdminAction,
   createLineupBoardAdminAction,
@@ -106,7 +107,7 @@ export default async function RaceLineupPage({ params }: { params: Promise<{ rac
                   <input
                     name="race_time"
                     type="datetime-local"
-                    defaultValue={boat.race_time ? new Date(String(boat.race_time)).toISOString().slice(0, 16) : ""}
+                    defaultValue={toEasternDateTimeLocalValue(boat.race_time ? String(boat.race_time) : null)}
                   />
                 </Field>
                 <Button type="submit" variant="secondary">

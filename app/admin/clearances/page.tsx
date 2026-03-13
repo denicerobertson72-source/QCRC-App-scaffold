@@ -5,6 +5,7 @@ import { PageTitle } from "@/components/ui/PageTitle";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { updateClearanceAdminAction } from "@/lib/actions";
+import { formatEasternDateTime } from "@/lib/time";
 
 export default async function AdminClearancesPage() {
   const { supabase } = await ensureProfile();
@@ -66,7 +67,7 @@ export default async function AdminClearancesPage() {
                   <td>{row.profiles?.full_name}</td>
                   <td>{row.boat_class_id}</td>
                   <td>{row.clearance_level}</td>
-                  <td>{new Date(row.approved_at).toLocaleString()}</td>
+                  <td>{formatEasternDateTime(row.approved_at)} ET</td>
                 </tr>
               ))}
             </tbody>

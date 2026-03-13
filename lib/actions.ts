@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensureProfile } from "@/lib/auth";
+import { easternLocalInputToIso } from "@/lib/time";
 
 function skillLevelToClearance(level: string) {
   switch (level) {
@@ -291,10 +292,13 @@ export async function addBoatAvailabilityBlockAdminAction(formData: FormData) {
   const isActive = String(formData.get("is_active") ?? "true") === "true";
   const notes = String(formData.get("notes") ?? "");
 
+  const startsAtIso = easternLocalInputToIso(startsAt);
+  const endsAtIso = easternLocalInputToIso(endsAt);
+
   const { error } = await supabase.from("boat_availability_blocks").insert({
     title,
-    starts_at: startsAt,
-    ends_at: endsAt,
+    starts_at: startsAtIso,
+    ends_at: endsAtIso,
     applies_to_membership_type: membershipType || null,
     applies_to_boat_class_id: boatClassId || null,
     is_active: isActive,
@@ -318,12 +322,15 @@ export async function updateBoatAvailabilityBlockAdminAction(formData: FormData)
   const isActive = String(formData.get("is_active") ?? "false") === "true";
   const notes = String(formData.get("notes") ?? "");
 
+  const startsAtIso = easternLocalInputToIso(startsAt);
+  const endsAtIso = easternLocalInputToIso(endsAt);
+
   const { error } = await supabase
     .from("boat_availability_blocks")
     .update({
       title,
-      starts_at: startsAt,
-      ends_at: endsAt,
+      starts_at: startsAtIso,
+      ends_at: endsAtIso,
       applies_to_membership_type: membershipType || null,
       applies_to_boat_class_id: boatClassId || null,
       is_active: isActive,
@@ -540,7 +547,7 @@ export async function updateLineupBoatRaceTimeAdminAction(formData: FormData) {
   const lineupBoatId = String(formData.get("lineup_boat_id") ?? "");
   const raceTime = String(formData.get("race_time") ?? "");
   const returnTo = String(formData.get("return_to") ?? "");
-  const raceTimeIso = raceTime ? new Date(raceTime).toISOString() : null;
+  const raceTimeIso = easternLocalInputToIso(raceTime);
 
   const { error } = await supabase
     .from("lineup_boats")
@@ -618,32 +625,6 @@ function monthWindowFromInput(monthInput: string) {
   return { start, end };
 }
 
-function getEasternOffsetMinutes(instant: Date) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    timeZoneName: "shortOffset",
-  }).formatToParts(instant);
-  const value = parts.find((part) => part.type === "timeZoneName")?.value ?? "GMT-5";
-  const match = value.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
-  if (!match) return -300;
-  const sign = match[1] === "-" ? -1 : 1;
-  const hours = Number(match[2]);
-  const minutes = Number(match[3] ?? "0");
-  return sign * (hours * 60 + minutes);
-}
-
-function toEasternLocalIso(year: number, monthIndex: number, day: number, hour: number, minute: number) {
-  const localWallMs = Date.UTC(year, monthIndex, day, hour, minute, 0);
-  let guess = new Date(localWallMs);
-  for (let i = 0; i < 2; i += 1) {
-    const offsetMinutes = getEasternOffsetMinutes(guess);
-    const corrected = new Date(localWallMs - offsetMinutes * 60 * 1000);
-    if (corrected.getTime() === guess.getTime()) break;
-    guess = corrected;
-  }
-  return guess.toISOString();
-}
-
 export async function generateProgramSessionsMonthAction(formData: FormData) {
   const { supabase, user } = await assertAdmin();
   const monthInput = String(formData.get("month") ?? "");
@@ -680,14 +661,18 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
     const dayOfWeek = date.getUTCDay();
 
     if (dayOfWeek === 6) {
-      const startsAt = toEasternLocalIso(year, monthIndex, day, 8, 0);
+      const startsAt = easternLocalInputToIso(
+        `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T08:00`,
+      ) as string;
       const key = `saturday_coached_row|${new Date(startsAt).toISOString()}`;
       if (!existingKeys.has(key)) {
         rows.push({
           title: "Saturday Coached Row",
           session_type: "saturday_coached_row",
           starts_at: startsAt,
-          ends_at: toEasternLocalIso(year, monthIndex, day, 9, 30),
+          ends_at: easternLocalInputToIso(
+            `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T09:30`,
+          ) as string,
           created_by: user.id,
           is_cancelled: false,
         });
@@ -695,14 +680,18 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
     }
 
     if (dayOfWeek === 1 || dayOfWeek === 4) {
-      const startsAt = toEasternLocalIso(year, monthIndex, day, 17, 30);
+      const startsAt = easternLocalInputToIso(
+        `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T17:30`,
+      ) as string;
       const key = `coached_training_beginner_intermediate|${new Date(startsAt).toISOString()}`;
       if (!existingKeys.has(key)) {
         rows.push({
           title: "Coached Training (Beginner/Intermediate)",
           session_type: "coached_training_beginner_intermediate",
           starts_at: startsAt,
-          ends_at: toEasternLocalIso(year, monthIndex, day, 18, 45),
+          ends_at: easternLocalInputToIso(
+            `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T18:45`,
+          ) as string,
           created_by: user.id,
           is_cancelled: false,
         });
@@ -710,14 +699,18 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
     }
 
     if (dayOfWeek === 2 || dayOfWeek === 4) {
-      const startsAt = toEasternLocalIso(year, monthIndex, day, 6, 30);
+      const startsAt = easternLocalInputToIso(
+        `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T06:30`,
+      ) as string;
       const key = `coached_training_advanced|${new Date(startsAt).toISOString()}`;
       if (!existingKeys.has(key)) {
         rows.push({
           title: "Coached Training (Advanced)",
           session_type: "coached_training_advanced",
           starts_at: startsAt,
-          ends_at: toEasternLocalIso(year, monthIndex, day, 7, 45),
+          ends_at: easternLocalInputToIso(
+            `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T07:45`,
+          ) as string,
           created_by: user.id,
           is_cancelled: false,
         });
@@ -743,8 +736,8 @@ export async function updateSessionTimesAdminAction(formData: FormData) {
   const startsAt = String(formData.get("starts_at") ?? "");
   const endsAt = String(formData.get("ends_at") ?? "");
 
-  const startsAtIso = startsAt ? new Date(startsAt).toISOString() : null;
-  const endsAtIso = endsAt ? new Date(endsAt).toISOString() : null;
+  const startsAtIso = easternLocalInputToIso(startsAt);
+  const endsAtIso = easternLocalInputToIso(endsAt);
 
   const { error } = await supabase
     .from("sessions")
