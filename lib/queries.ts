@@ -221,7 +221,7 @@ export async function getLineupBoardDetail(lineupBoardId: string) {
         id: seat.id,
         seat_number: seat.seat_number,
         member_id: seat.member_id,
-        member_name: Array.isArray(seat.profiles) ? seat.profiles[0]?.full_name ?? null : seat.profiles?.full_name ?? null,
+        member_name: profileNameFromRelation(seat.profiles),
       })),
     })),
   };
