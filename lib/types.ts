@@ -48,3 +48,17 @@ export type BoatAvailabilityBlock = {
   is_active: boolean;
   notes: string | null;
 };
+
+export type ProgramSession = {
+  id: string;
+  title: string;
+  session_type: string;
+  starts_at: string;
+  ends_at: string;
+  location: string | null;
+  notes: string | null;
+  is_cancelled: boolean;
+  cancelled_reason: string | null;
+  my_signed_up: boolean;
+  signup_count: number;
+};

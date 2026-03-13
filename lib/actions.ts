@@ -453,13 +453,22 @@ export async function addLineupBoatAdminAction(formData: FormData) {
   const boatName = String(formData.get("boat_name") ?? "");
   const boatClassId = String(formData.get("boat_class_id") ?? "4x");
 
+  const { data: existingBoats, error: existingError } = await supabase
+    .from("lineup_boats")
+    .select("sort_order")
+    .eq("lineup_board_id", lineupBoardId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  if (existingError) throw existingError;
+  const nextSortOrder = (existingBoats?.[0]?.sort_order ?? 0) + 1;
+
   const { data, error } = await supabase
     .from("lineup_boats")
     .insert({
       lineup_board_id: lineupBoardId,
       boat_name: boatName,
       boat_class_id: boatClassId,
-      sort_order: Date.now(),
+      sort_order: nextSortOrder,
     })
     .select("id")
     .single();
@@ -514,4 +523,159 @@ export async function publishLineupBoardAdminAction(formData: FormData) {
   revalidatePath("/admin/lineups");
   revalidatePath("/admin/races");
   revalidatePath("/lineups");
+}
+
+export async function toggleSessionSignupAction(formData: FormData) {
+  const { supabase, user } = await ensureProfile();
+  const sessionId = String(formData.get("session_id") ?? "");
+  const signedUp = String(formData.get("signed_up") ?? "true") === "true";
+
+  if (signedUp) {
+    const { error } = await supabase.from("session_signups").upsert(
+      {
+        session_id: sessionId,
+        member_id: user.id,
+      },
+      { onConflict: "session_id,member_id" },
+    );
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("session_signups")
+      .delete()
+      .eq("session_id", sessionId)
+      .eq("member_id", user.id);
+    if (error) throw error;
+  }
+
+  revalidatePath("/programs/saturday");
+  revalidatePath("/programs/training");
+  revalidatePath("/admin/programs");
+}
+
+export async function cancelSessionAdminAction(formData: FormData) {
+  const { supabase } = await assertAdmin();
+  const sessionId = String(formData.get("session_id") ?? "");
+  const isCancelled = String(formData.get("is_cancelled") ?? "true") === "true";
+  const cancelledReason = String(formData.get("cancelled_reason") ?? "");
+
+  const { error } = await supabase
+    .from("sessions")
+    .update({
+      is_cancelled: isCancelled,
+      cancelled_reason: isCancelled ? cancelledReason || "Cancelled by coach/admin" : null,
+    })
+    .eq("id", sessionId);
+  if (error) throw error;
+
+  revalidatePath("/programs/saturday");
+  revalidatePath("/programs/training");
+  revalidatePath("/admin/programs");
+}
+
+function monthWindowFromInput(monthInput: string) {
+  const fallback = new Date();
+  const [yearRaw, monthRaw] = monthInput.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const safeYear = Number.isFinite(year) && year > 2000 ? year : fallback.getFullYear();
+  const safeMonthIndex = Number.isFinite(month) && month >= 1 && month <= 12 ? month - 1 : fallback.getMonth();
+  const start = new Date(Date.UTC(safeYear, safeMonthIndex, 1, 0, 0, 0));
+  const end = new Date(Date.UTC(safeYear, safeMonthIndex + 1, 1, 0, 0, 0));
+  return { start, end };
+}
+
+function toIsoUtc(year: number, monthIndex: number, day: number, hour: number, minute: number) {
+  return new Date(Date.UTC(year, monthIndex, day, hour, minute, 0)).toISOString();
+}
+
+export async function generateProgramSessionsMonthAction(formData: FormData) {
+  const { supabase, user } = await assertAdmin();
+  const monthInput = String(formData.get("month") ?? "");
+  const { start, end } = monthWindowFromInput(monthInput);
+
+  const { data: existing, error: existingError } = await supabase
+    .from("sessions")
+    .select("session_type, starts_at")
+    .in("session_type", [
+      "saturday_coached_row",
+      "coached_training_beginner_intermediate",
+      "coached_training_advanced",
+    ])
+    .gte("starts_at", start.toISOString())
+    .lt("starts_at", end.toISOString());
+  if (existingError) throw existingError;
+
+  const existingKeys = new Set((existing ?? []).map((s) => `${s.session_type}|${new Date(s.starts_at).toISOString()}`));
+  const rows: Array<{
+    title: string;
+    session_type: string;
+    starts_at: string;
+    ends_at: string;
+    created_by: string;
+    is_cancelled: boolean;
+  }> = [];
+
+  const year = start.getUTCFullYear();
+  const monthIndex = start.getUTCMonth();
+  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(Date.UTC(year, monthIndex, day));
+    const dayOfWeek = date.getUTCDay();
+
+    if (dayOfWeek === 6) {
+      const startsAt = toIsoUtc(year, monthIndex, day, 13, 0); // 8:00 AM ET approximation in UTC
+      const key = `saturday_coached_row|${new Date(startsAt).toISOString()}`;
+      if (!existingKeys.has(key)) {
+        rows.push({
+          title: "Saturday Coached Row",
+          session_type: "saturday_coached_row",
+          starts_at: startsAt,
+          ends_at: toIsoUtc(year, monthIndex, day, 14, 30),
+          created_by: user.id,
+          is_cancelled: false,
+        });
+      }
+    }
+
+    if (dayOfWeek === 1 || dayOfWeek === 4) {
+      const startsAt = toIsoUtc(year, monthIndex, day, 22, 30); // 5:30 PM ET approximation in UTC
+      const key = `coached_training_beginner_intermediate|${new Date(startsAt).toISOString()}`;
+      if (!existingKeys.has(key)) {
+        rows.push({
+          title: "Coached Training (Beginner/Intermediate)",
+          session_type: "coached_training_beginner_intermediate",
+          starts_at: startsAt,
+          ends_at: toIsoUtc(year, monthIndex, day, 23, 45),
+          created_by: user.id,
+          is_cancelled: false,
+        });
+      }
+    }
+
+    if (dayOfWeek === 2 || dayOfWeek === 4) {
+      const startsAt = toIsoUtc(year, monthIndex, day, 11, 30); // 6:30 AM ET approximation in UTC
+      const key = `coached_training_advanced|${new Date(startsAt).toISOString()}`;
+      if (!existingKeys.has(key)) {
+        rows.push({
+          title: "Coached Training (Advanced)",
+          session_type: "coached_training_advanced",
+          starts_at: startsAt,
+          ends_at: toIsoUtc(year, monthIndex, day, 12, 45),
+          created_by: user.id,
+          is_cancelled: false,
+        });
+      }
+    }
+  }
+
+  if (rows.length > 0) {
+    const { error } = await supabase.from("sessions").insert(rows);
+    if (error) throw error;
+  }
+
+  revalidatePath("/programs/saturday");
+  revalidatePath("/programs/training");
+  revalidatePath("/admin/programs");
 }

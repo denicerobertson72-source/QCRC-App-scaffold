@@ -43,6 +43,12 @@ export default async function AdminPage() {
             <p className="muted">Create race events and review race signup preferences.</p>
             <Link href="/admin/races">Open Races</Link>
           </Card>
+
+          <Card className="stack">
+            <h3>Program Schedule</h3>
+            <p className="muted">Generate monthly dates and cancel sessions shown to rowers.</p>
+            <Link href="/admin/programs">Open Program Schedule</Link>
+          </Card>
         </div>
 
         <div className="row">

@@ -1,5 +1,5 @@
 import { ensureProfile } from "@/lib/auth";
-import type { Boat, BoatAvailabilityBlock, ProfileSummary, Reservation } from "@/lib/types";
+import type { Boat, BoatAvailabilityBlock, ProfileSummary, ProgramSession, Reservation } from "@/lib/types";
 
 function profileNameFromRelation(profileRelation: unknown) {
   if (Array.isArray(profileRelation)) {
@@ -236,4 +236,42 @@ export async function getPublishedLineups() {
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+export async function getProgramSessionsForMonth(programTypes: string[], monthStartIso: string, monthEndIso: string) {
+  const { supabase, user } = await ensureProfile();
+
+  const { data: sessions, error: sessionsError } = await supabase
+    .from("sessions")
+    .select("id, title, session_type, starts_at, ends_at, location, notes, is_cancelled, cancelled_reason")
+    .in("session_type", programTypes)
+    .gte("starts_at", monthStartIso)
+    .lt("starts_at", monthEndIso)
+    .order("starts_at", { ascending: true });
+  if (sessionsError) throw sessionsError;
+
+  const sessionIds = (sessions ?? []).map((s) => s.id);
+  if (sessionIds.length === 0) return [] as ProgramSession[];
+
+  const { data: allSignups, error: signupError } = await supabase
+    .from("session_signups")
+    .select("session_id, member_id")
+    .in("session_id", sessionIds);
+  if (signupError) throw signupError;
+
+  const countBySession = new Map<string, number>();
+  const mine = new Set<string>();
+
+  for (const signup of allSignups ?? []) {
+    countBySession.set(signup.session_id, (countBySession.get(signup.session_id) ?? 0) + 1);
+    if (signup.member_id === user.id) {
+      mine.add(signup.session_id);
+    }
+  }
+
+  return (sessions ?? []).map((session) => ({
+    ...session,
+    my_signed_up: mine.has(session.id),
+    signup_count: countBySession.get(session.id) ?? 0,
+  })) as ProgramSession[];
 }
