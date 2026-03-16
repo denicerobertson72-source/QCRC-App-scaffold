@@ -240,9 +240,12 @@ a:hover {
 
 label {
   display: grid;
-  gap: 0.35rem;
-  font-size: 0.9rem;
+  gap: 0.45rem;
+  font-size: 0.84rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5a463f;
 }
 
 input,
@@ -256,18 +259,95 @@ input,
 textarea,
 select {
   width: 100%;
-  background: rgba(255, 253, 250, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.12) 28%),
+    rgba(255, 249, 244, 0.88);
   color: var(--ink);
-  border: 1px solid rgba(65, 32, 20, 0.14);
-  padding: 0.7rem 0.82rem;
+  border: 1px solid rgba(85, 43, 27, 0.18);
+  padding: 0.78rem 0.9rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 8px 18px rgba(49, 22, 12, 0.08);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(87, 61, 50, 0.72);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid rgba(255, 90, 31, 0.3);
-  outline-offset: 1px;
-  border-color: rgba(255, 90, 31, 0.55);
+  outline: none;
+  border-color: rgba(255, 90, 31, 0.68);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.16) 28%),
+    rgba(255, 250, 246, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 0 0 3px rgba(255, 90, 31, 0.18),
+    0 14px 26px rgba(110, 39, 18, 0.12);
+  transform: translateY(-1px);
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(85, 43, 27, 0.8) 50%),
+    linear-gradient(135deg, rgba(85, 43, 27, 0.8) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 2.4rem;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  accent-color: var(--brand);
+  box-shadow: none;
+  transform: none;
+}
+
+input[type="hidden"] {
+  display: none;
+}
+
+.form-grid,
+.inline-form {
+  gap: var(--space-2);
+}
+
+.inline-form > * {
+  flex: 1 1 180px;
+}
+
+.inline-form > button,
+.inline-form > .btn-secondary {
+  flex: 0 0 auto;
+}
+
+.card-subtle input,
+.card-subtle textarea,
+.card-subtle select {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.08) 32%),
+    rgba(255, 245, 238, 0.76);
 }
 
 button {
@@ -343,16 +423,21 @@ button:disabled {
 
 table {
   width: 100%;
-  border-collapse: collapse;
-  background: transparent;
-  border-radius: 14px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: rgba(255, 248, 242, 0.44);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
   overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 18px 34px rgba(22, 12, 8, 0.14);
 }
 
 th,
 td {
-  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
-  padding: 0.68rem 0.55rem;
+  border-bottom: 1px solid rgba(91, 52, 36, 0.11);
+  padding: 0.82rem 0.8rem;
   text-align: left;
   font-size: 0.92rem;
 }
@@ -362,7 +447,26 @@ thead th {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ink-soft);
-  background: rgba(17, 17, 17, 0.04);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.08)),
+    rgba(255, 231, 217, 0.64);
+}
+
+tbody tr {
+  background: rgba(255, 252, 248, 0.58);
+  transition: background 120ms ease;
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(255, 245, 238, 0.72);
+}
+
+tbody tr:hover {
+  background: rgba(255, 233, 219, 0.92);
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 @media (max-width: 900px) {
