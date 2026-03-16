@@ -7,7 +7,7 @@ export function TopNav() {
     <header className="topnav">
       <nav>
         <div className="topnav-home">
-          <img src="/qcrc-lockup.svg" alt="QCRC" className="topnav-logo topnav-logo-plain" />
+          <img src="/QCRC.png" alt="QCRC" className="topnav-logo topnav-logo-plain" />
           <Link href="/reservations">Reservations</Link>
         </div>
         <Link href="/reserve">Reserve</Link>
