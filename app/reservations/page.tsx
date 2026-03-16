@@ -22,12 +22,24 @@ function reservationStatusKind(status: string): "default" | "reserved" | "checke
 
 export default async function ReservationsPage() {
   const reservations = await getMyReservations();
+  const activeCount = reservations.filter((reservation) => reservation.status === "reserved" || reservation.status === "checked_out").length;
 
   return (
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle title="My Reservations" actions={<Link href="/reserve">Create a reservation</Link>} />
+        <section className="hero-panel stack">
+          <span className="eyebrow">Boat Desk</span>
+          <PageTitle
+            title="My Reservations"
+            subtitle={`Active outings: ${activeCount}. Every reservation remains in your permanent club history.`}
+            actions={
+              <Link href="/reserve" className="cta-link">
+                Create a reservation
+              </Link>
+            }
+          />
+        </section>
 
         <div className="stack">
           {reservations.length === 0 ? <Card subtle>No reservations yet.</Card> : null}

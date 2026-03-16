@@ -45,10 +45,13 @@ export default async function ReservePage({
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle
-          title="Reserve a Boat"
-          subtitle={`Your profile: ${profile.skill_level} | ${profile.weight_class}`}
-        />
+        <section className="hero-panel stack">
+          <span className="eyebrow">Boat Matching</span>
+          <PageTitle
+            title="Reserve a Boat"
+            subtitle={`Skill level: ${profile.skill_level}. Weight class: ${profile.weight_class}. Search a time window, then reserve from boats you are cleared to use.`}
+          />
+        </section>
 
         <form method="get" className="card form-grid">
           <Field label="Start">
