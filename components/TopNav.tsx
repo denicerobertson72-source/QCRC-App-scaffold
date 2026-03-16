@@ -6,9 +6,6 @@ export function TopNav() {
   return (
     <header className="topnav">
       <nav>
-        <Link href="/reservations" className="topnav-brand" aria-label="QCRC home">
-          <img src="/qcrc-lockup.svg" alt="QCRC" className="topnav-logo" />
-        </Link>
         <Link href="/reservations">Reservations</Link>
         <Link href="/reserve">Reserve</Link>
         <Link href="/programs">Programs</Link>

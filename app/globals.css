@@ -133,25 +133,6 @@ a:hover {
   border-color: var(--brand-ghost);
 }
 
-.topnav-brand {
-  display: inline-flex;
-  align-items: center;
-  margin-right: var(--space-2);
-  padding-right: 0.8rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.topnav-brand:hover {
-  text-decoration: none;
-}
-
-.topnav-logo {
-  width: 78px;
-  height: auto;
-  display: block;
-  filter: drop-shadow(0 12px 22px rgba(249, 75, 35, 0.28));
-}
-
 .card {
   background: var(--surface);
   border: 1px solid rgba(17, 17, 17, 0.08);
@@ -340,12 +321,6 @@ thead th {
   .topnav {
     align-items: flex-start;
   }
-
-  .topnav-brand {
-    border-right: 0;
-    padding-right: 0;
-    margin-right: 0;
-  }
 }
 
 @media (max-width: 820px) {
@@ -355,9 +330,5 @@ thead th {
 
   .topnav {
     padding: 0.75rem;
-  }
-
-  .topnav-logo {
-    width: 66px;
   }
 }
