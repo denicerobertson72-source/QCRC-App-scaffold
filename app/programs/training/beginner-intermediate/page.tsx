@@ -45,7 +45,7 @@ export default async function TrainingBIPage({ searchParams }: { searchParams: S
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle title="Training: Beginner/Intermediate" subtitle={`${month.label} (Mon + Thu at 5:30 PM ET)`} />
+        <PageTitle title="Training: Beginner/Intermediate" subtitle={`${month.label} (Mon + Thu at 5:30 PM ET, arrival 5:10 PM)`} />
 
         <div className="row">
           <Link href="/programs/training">Back to Groups</Link>
@@ -59,7 +59,7 @@ export default async function TrainingBIPage({ searchParams }: { searchParams: S
           {sessions.map((session) => (
             <Card key={session.id} className="stack">
               <h3>{prettyDateTime(session.starts_at)}</h3>
-              <p className="muted">Signups: {session.signup_count}</p>
+              <p className="muted">Arrival 5:10 PM ET | Signups: {session.signup_count}</p>
               {session.is_cancelled ? (
                 <p className="error">Cancelled{session.cancelled_reason ? `: ${session.cancelled_reason}` : ""}</p>
               ) : (

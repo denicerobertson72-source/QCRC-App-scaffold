@@ -12,12 +12,12 @@ export default function TrainingProgramHubPage() {
         <div className="grid">
           <Card className="stack">
             <h3>Beginner/Intermediate</h3>
-            <p className="muted">Monday and Thursday at 5:30 PM ET.</p>
+            <p className="muted">Monday and Thursday at 5:30 PM ET. Arrival time 5:10 PM.</p>
             <Link href="/programs/training/beginner-intermediate">Open Group</Link>
           </Card>
           <Card className="stack">
             <h3>Advanced</h3>
-            <p className="muted">Tuesday and Thursday at 6:30 AM ET.</p>
+            <p className="muted">Tuesday and Thursday at 6:30 AM ET. Arrival time 6:10 AM.</p>
             <Link href="/programs/training/advanced">Open Group</Link>
           </Card>
         </div>

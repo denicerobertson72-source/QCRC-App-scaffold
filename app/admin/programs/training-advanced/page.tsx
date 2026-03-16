@@ -61,6 +61,7 @@ export default async function AdminProgramsAdvancedPage({ searchParams }: { sear
 
         <form action={generateProgramSessionsMonthAction} className="card inline-form">
           <input type="hidden" name="month" value={month.current} />
+          <input type="hidden" name="program_scope" value="training_advanced" />
           <Button type="submit">Generate Month Sessions</Button>
         </form>
 

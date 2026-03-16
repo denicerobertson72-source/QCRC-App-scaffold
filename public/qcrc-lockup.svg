@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 180" role="img" aria-labelledby="title desc">
+  <title id="title">QCRC logo</title>
+  <desc id="desc">A stylized black C with an orange crown, crossed oars, and QCRC wordmark.</desc>
+  <defs>
+    <style>
+      .orange { fill: #ff5a1f; stroke: #ff5a1f; }
+      .black { fill: #090909; stroke: #090909; }
+      .white { fill: #ffffff; stroke: #ffffff; }
+      .line { stroke-width: 8; stroke-linecap: round; }
+      .word { font: 900 44px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: 2px; }
+    </style>
+  </defs>
+  <g transform="translate(22 18)">
+    <circle class="orange" cx="88" cy="10" r="10"/>
+    <path class="orange" d="M44 76c-8 0-14-6-14-14 0-18 15-33 33-33 10 0 18 4 25 11 7-11 19-18 33-18 13 0 24 5 31 15 7-10 19-15 32-15 23 0 39 16 39 40 0 5-1 10-3 15l-18-3c2-4 3-7 3-11 0-12-8-21-19-21-10 0-17 7-18 18l-7 46-18-3 7-45c2-12-6-25-19-25-10 0-19 8-21 19l-7 47-17-4 6-44c2-12-6-25-19-25-11 0-20 9-20 20 0 4 1 8 3 11l-18 4c-2-5-3-10-3-15 0-24 18-40 41-40 12 0 24 5 32 14l-9-25h19l10 29 11-29h18l-11 30c8-12 22-19 38-19 26 0 44 18 44 44 0 7-1 14-4 20l-21-4 1-5H44z"/>
+    <path class="orange" d="M28 92 194 35" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <path class="black" d="M145 55c-34 0-61 27-61 61s27 61 61 61c18 0 35-8 46-22l-22-15c-6 8-14 12-24 12-19 0-34-16-34-36s15-36 34-36c11 0 21 5 27 15l23-13c-10-17-29-27-50-27z"/>
+    <path class="black line" d="M18 124 132 79"/>
+    <path class="black line" d="M198 124 84 79"/>
+    <path class="white" d="M7 118 21 112 31 118 17 124Z"/>
+    <path class="white" d="M209 118 195 112 185 118 199 124Z"/>
+    <path class="orange" d="M0 112 18 104 32 112 17 118Z"/>
+    <path class="orange" d="M216 112 198 104 184 112 199 118Z"/>
+    <text class="orange word" x="52" y="162">QCRC</text>
+  </g>
+</svg>

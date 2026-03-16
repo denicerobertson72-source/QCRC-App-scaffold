@@ -61,6 +61,7 @@ export default async function AdminProgramsBIPage({ searchParams }: { searchPara
 
         <form action={generateProgramSessionsMonthAction} className="card inline-form">
           <input type="hidden" name="month" value={month.current} />
+          <input type="hidden" name="program_scope" value="training_bi" />
           <Button type="submit">Generate Month Sessions</Button>
         </form>
 

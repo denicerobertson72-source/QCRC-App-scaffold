@@ -8,16 +8,16 @@ export default function ProgramsPage() {
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle title="Programs" subtitle="Sign up for coached rows, training, and racing." />
+        <PageTitle title="Programs" subtitle="Sign up for coached rows, training, and racing with QCRC's current schedule." />
         <div className="grid">
           <Card className="stack">
             <h3>Saturday Coached Row</h3>
-            <p className="muted">General coached session signup roster.</p>
+            <p className="muted">Row at 8:30 AM ET. Arrival time 7:45 AM.</p>
             <Link href="/programs/saturday">Open Signup</Link>
           </Card>
           <Card className="stack">
             <h3>Coached Training</h3>
-            <p className="muted">Choose Beginner/Intermediate or Advanced training group.</p>
+            <p className="muted">Choose Beginner/Intermediate or Advanced with date-based weekly signups.</p>
             <Link href="/programs/training">Open Signup</Link>
           </Card>
           <Card className="stack">

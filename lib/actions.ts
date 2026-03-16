@@ -634,16 +634,22 @@ function monthWindowFromInput(monthInput: string) {
 export async function generateProgramSessionsMonthAction(formData: FormData) {
   const { supabase, user } = await assertAdmin();
   const monthInput = String(formData.get("month") ?? "");
+  const programScope = String(formData.get("program_scope") ?? "all");
   const { start, end } = monthWindowFromInput(monthInput);
+
+  const scopedTypes =
+    programScope === "saturday"
+      ? ["saturday_coached_row"]
+      : programScope === "training_bi"
+        ? ["coached_training_beginner_intermediate"]
+        : programScope === "training_advanced"
+          ? ["coached_training_advanced"]
+          : ["saturday_coached_row", "coached_training_beginner_intermediate", "coached_training_advanced"];
 
   const { data: existing, error: existingError } = await supabase
     .from("sessions")
     .select("session_type, starts_at")
-    .in("session_type", [
-      "saturday_coached_row",
-      "coached_training_beginner_intermediate",
-      "coached_training_advanced",
-    ])
+    .in("session_type", scopedTypes)
     .gte("starts_at", start.toISOString())
     .lt("starts_at", end.toISOString());
   if (existingError) throw existingError;
@@ -666,7 +672,7 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
     const date = new Date(Date.UTC(year, monthIndex, day));
     const dayOfWeek = date.getUTCDay();
 
-    if (dayOfWeek === 6) {
+    if (scopedTypes.includes("saturday_coached_row") && dayOfWeek === 6) {
       const startsAt = easternLocalInputToIso(
         `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T08:30`,
       ) as string;
@@ -685,7 +691,7 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
       }
     }
 
-    if (dayOfWeek === 1 || dayOfWeek === 4) {
+    if (scopedTypes.includes("coached_training_beginner_intermediate") && (dayOfWeek === 1 || dayOfWeek === 4)) {
       const startsAt = easternLocalInputToIso(
         `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T17:30`,
       ) as string;
@@ -704,7 +710,7 @@ export async function generateProgramSessionsMonthAction(formData: FormData) {
       }
     }
 
-    if (dayOfWeek === 2 || dayOfWeek === 4) {
+    if (scopedTypes.includes("coached_training_advanced") && (dayOfWeek === 2 || dayOfWeek === 4)) {
       const startsAt = easternLocalInputToIso(
         `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T06:30`,
       ) as string;

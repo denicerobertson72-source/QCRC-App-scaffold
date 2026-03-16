@@ -45,7 +45,7 @@ export default async function TrainingAdvancedPage({ searchParams }: { searchPar
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle title="Training: Advanced" subtitle={`${month.label} (Tue + Thu at 6:30 AM ET)`} />
+        <PageTitle title="Training: Advanced" subtitle={`${month.label} (Tue + Thu at 6:30 AM ET, arrival 6:10 AM)`} />
 
         <div className="row">
           <Link href="/programs/training">Back to Groups</Link>
@@ -59,7 +59,7 @@ export default async function TrainingAdvancedPage({ searchParams }: { searchPar
           {sessions.map((session) => (
             <Card key={session.id} className="stack">
               <h3>{prettyDateTime(session.starts_at)}</h3>
-              <p className="muted">Signups: {session.signup_count}</p>
+              <p className="muted">Arrival 6:10 AM ET | Signups: {session.signup_count}</p>
               {session.is_cancelled ? (
                 <p className="error">Cancelled{session.cancelled_reason ? `: ${session.cancelled_reason}` : ""}</p>
               ) : (
