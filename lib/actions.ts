@@ -60,8 +60,10 @@ export async function reserveBoatAction(formData: FormData) {
   const checkoutLocation = String(formData.get("checkout_location") ?? "");
   const notes = String(formData.get("notes") ?? "");
   const crew = parseCrew(formData.get("crew"));
+  const rawReturnTo = String(formData.get("return_to") ?? "/reserve");
+  const returnTo = rawReturnTo.startsWith("/") ? rawReturnTo : "/reserve";
 
-  const { error } = await supabase.rpc("reserve_boat", {
+  const result = await supabase.rpc("reserve_boat", {
     p_boat_id: boatId,
     p_start_time: startTime,
     p_end_time: endTime,
@@ -70,9 +72,23 @@ export async function reserveBoatAction(formData: FormData) {
     p_crew: crew,
   });
 
-  if (error) throw error;
+  const destination = new URL(returnTo, "http://local");
+
+  if (result.error) {
+    const rawMessage = result.error.message || "Reservation failed.";
+    const message = rawMessage.includes("Reservation blocked")
+      ? "Reservation blocked. Check dues, waiver, skill tier, weight class, or boat availability."
+      : rawMessage;
+    destination.searchParams.set("reservation_status", "error");
+    destination.searchParams.set("reservation_message", message);
+    redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+  }
+
   revalidatePath("/reservations");
   revalidatePath("/reserve");
+  destination.searchParams.set("reservation_status", "success");
+  destination.searchParams.set("reservation_message", "Reservation confirmed.");
+  redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
 }
 
 export async function checkoutAction(formData: FormData) {

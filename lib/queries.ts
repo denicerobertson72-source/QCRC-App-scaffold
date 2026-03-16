@@ -247,7 +247,24 @@ export async function getPublishedLineups() {
     .eq("is_published", true)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data ?? [];
+
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+
+  return (data ?? []).filter((board) => {
+    const session = Array.isArray(board.sessions) ? board.sessions[0] : board.sessions;
+    const race = Array.isArray(board.race_events) ? board.race_events[0] : board.race_events;
+
+    if (session?.starts_at) {
+      return new Date(session.starts_at) >= now;
+    }
+
+    if (race?.event_date) {
+      return String(race.event_date) >= today;
+    }
+
+    return true;
+  });
 }
 
 export async function getProgramSessionsForMonth(programTypes: string[], monthStartIso: string, monthEndIso: string) {
@@ -283,7 +300,9 @@ export async function getProgramSessionsForMonth(programTypes: string[], monthSt
     }
   }
 
-  return (sessions ?? []).map((session) => ({
+  return (sessions ?? [])
+    .filter((session) => new Date(session.starts_at) >= new Date(nowIso))
+    .map((session) => ({
     ...session,
     my_signed_up: mine.has(session.id),
     signup_count: countBySession.get(session.id) ?? 0,

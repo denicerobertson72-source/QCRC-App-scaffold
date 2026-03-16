@@ -6,11 +6,14 @@ import { PageTitle } from "@/components/ui/PageTitle";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
+import { FlashNotice } from "@/components/ui/FlashNotice";
 
 type ReserveSearchParams = Promise<{
   start?: string;
   end?: string;
   boatClassId?: string;
+  reservation_status?: string;
+  reservation_message?: string;
 }>;
 
 function toInputDateTime(value: Date) {
@@ -31,6 +34,11 @@ export default async function ReservePage({
   const start = params.start ?? toInputDateTime(now);
   const end = params.end ?? toInputDateTime(inTwoHours);
   const boatClassId = params.boatClassId ?? "";
+  const reservationStatus = params.reservation_status === "error" ? "error" : params.reservation_status === "success" ? "success" : null;
+  const reservationMessage = params.reservation_message ?? "";
+  const reserveReturnTo = `/reserve?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}${
+    boatClassId ? `&boatClassId=${encodeURIComponent(boatClassId)}` : ""
+  }`;
 
   const [availableBoats, allBoats, profile] = await Promise.all([
     getAvailableBoats(start, end, boatClassId || undefined),
@@ -52,6 +60,8 @@ export default async function ReservePage({
             subtitle={`Skill level: ${profile.skill_level}. Weight class: ${profile.weight_class}. Search a time window, then reserve from boats you are cleared to use.`}
           />
         </section>
+
+        {reservationStatus && reservationMessage ? <FlashNotice status={reservationStatus} message={reservationMessage} /> : null}
 
         <form method="get" className="card form-grid">
           <Field label="Start">
@@ -77,7 +87,7 @@ export default async function ReservePage({
           {visibleBoats.map((boat) => {
             const reservable = boat.status === "available" && availableIds.has(boat.id);
             if (reservable) {
-              return <ReservationForm key={boat.id} boat={boat} start={start} end={end} />;
+              return <ReservationForm key={boat.id} boat={boat} start={start} end={end} returnTo={reserveReturnTo} />;
             }
 
             return (

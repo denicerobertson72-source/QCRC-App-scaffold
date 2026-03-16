@@ -4,7 +4,7 @@ import { StatusChip } from "@/components/ui/StatusChip";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 
-export function ReservationForm({ boat, start, end }: { boat: Boat; start: string; end: string }) {
+export function ReservationForm({ boat, start, end, returnTo }: { boat: Boat; start: string; end: string; returnTo: string }) {
   return (
     <form action={reserveBoatAction} className="card form-grid">
       {boat.photo_url ? (
@@ -26,6 +26,7 @@ export function ReservationForm({ boat, start, end }: { boat: Boat; start: strin
       </p>
 
       <input type="hidden" name="boat_id" value={boat.id} />
+      <input type="hidden" name="return_to" value={returnTo} />
       <Field label="Start">
         <input name="start_time" type="datetime-local" defaultValue={start} required />
       </Field>

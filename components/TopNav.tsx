@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { signOutAction } from "@/lib/actions";
 import { Button } from "@/components/ui/Button";
+import { ensureProfile } from "@/lib/auth";
 
-export function TopNav() {
+export async function TopNav() {
+  const { supabase, user } = await ensureProfile();
+  const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const isAdmin = data?.role === "admin";
+
   return (
     <header className="topnav">
       <nav>
@@ -15,7 +20,7 @@ export function TopNav() {
         <Link href="/lineups">Lineups</Link>
         <Link href="/boats">Boats</Link>
         <Link href="/damage/new">Damage</Link>
-        <Link href="/admin">Admin</Link>
+        {isAdmin ? <Link href="/admin">Admin</Link> : null}
         <Link href="/account/security">Security</Link>
       </nav>
       <form action={signOutAction}>
