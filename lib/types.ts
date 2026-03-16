@@ -5,7 +5,7 @@ export type Boat = {
   photo_url: string | null;
   boat_class_id: "1x" | "2x" | "4x" | string;
   boat_type: string;
-  required_skill_level: "LTR" | "Beginner" | "Intermediate" | "Advanced" | "Elite" | string;
+  required_skill_level: "Beginner" | "Intermediate" | "Advanced" | "Elite" | string;
   weight_class: "Lightweight" | "Mid-weight" | "Heavyweight" | null | string;
   required_clearance: number;
   status: "available" | "maintenance" | "locked" | string;
@@ -20,7 +20,7 @@ export type ProfileSummary = {
   status: string;
   dues_ok: boolean;
   membership_type: string;
-  skill_level: "LTR" | "Beginner" | "Intermediate" | "Advanced" | "Elite" | string;
+  skill_level: "Beginner" | "Intermediate" | "Advanced" | "Elite" | string;
   weight_class: "Lightweight" | "Mid-weight" | "Heavyweight" | string;
 };
 

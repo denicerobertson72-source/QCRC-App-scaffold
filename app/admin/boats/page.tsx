@@ -37,7 +37,6 @@ export default async function AdminBoatsPage() {
           </Field>
           <Field label="Required skill level">
             <select name="required_skill_level" defaultValue="Beginner">
-              <option value="LTR">LTR</option>
               <option value="Beginner">Beginner</option>
               <option value="Intermediate">Intermediate</option>
               <option value="Advanced">Advanced</option>
@@ -94,7 +93,6 @@ export default async function AdminBoatsPage() {
               </Field>
               <Field label="Required skill level">
                 <select name="required_skill_level" defaultValue={boat.required_skill_level}>
-                  <option value="LTR">LTR</option>
                   <option value="Beginner">Beginner</option>
                   <option value="Intermediate">Intermediate</option>
                   <option value="Advanced">Advanced</option>

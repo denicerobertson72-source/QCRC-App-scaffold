@@ -14,10 +14,18 @@ function skillLevelToClearance(level: string) {
     case "Intermediate":
       return 2;
     case "Beginner":
-    case "LTR":
     default:
       return 1;
   }
+}
+
+function clearanceValueFromForm(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "Beginner");
+  const numeric = Number(raw);
+  if (!Number.isNaN(numeric) && numeric >= 1 && numeric <= 4) {
+    return numeric;
+  }
+  return skillLevelToClearance(raw);
 }
 
 async function assertAdmin() {
@@ -239,7 +247,7 @@ export async function updateClearanceAdminAction(formData: FormData) {
   const { supabase, user } = await assertAdmin();
   const memberId = String(formData.get("member_id") ?? "");
   const boatClassId = String(formData.get("boat_class_id") ?? "");
-  const clearanceLevel = Number(formData.get("clearance_level") ?? 1);
+  const clearanceLevel = clearanceValueFromForm(formData.get("clearance_level"));
 
   const { error } = await supabase.from("member_clearances").upsert(
     {

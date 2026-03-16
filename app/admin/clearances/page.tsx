@@ -7,6 +7,20 @@ import { Button } from "@/components/ui/Button";
 import { updateClearanceAdminAction } from "@/lib/actions";
 import { formatEasternDateTime } from "@/lib/time";
 
+function clearanceLabel(level: number) {
+  switch (level) {
+    case 4:
+      return "Elite";
+    case 3:
+      return "Advanced";
+    case 2:
+      return "Intermediate";
+    case 1:
+    default:
+      return "Beginner";
+  }
+}
+
 export default async function AdminClearancesPage() {
   const { supabase } = await ensureProfile();
 
@@ -22,7 +36,7 @@ export default async function AdminClearancesPage() {
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle title="Admin: Clearances" subtitle="Set member access level by boat class." />
+        <PageTitle title="Admin: Clearances" subtitle="Set member access by boat class using named skill tiers." />
 
         <form action={updateClearanceAdminAction} className="card form-grid">
           <h3>Set Clearance</h3>
@@ -45,8 +59,13 @@ export default async function AdminClearancesPage() {
               <option value="4x">4x</option>
             </select>
           </Field>
-          <Field label="Level (1-4)">
-            <input name="clearance_level" type="number" min={1} max={4} defaultValue={1} />
+          <Field label="Skill tier">
+            <select name="clearance_level" defaultValue="Beginner">
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+              <option value="Elite">Elite</option>
+            </select>
           </Field>
           <Button type="submit">Save Clearance</Button>
         </form>
@@ -57,7 +76,7 @@ export default async function AdminClearancesPage() {
               <tr>
                 <th>Member</th>
                 <th>Boat Class</th>
-                <th>Level</th>
+                <th>Skill Tier</th>
                 <th>Approved At</th>
               </tr>
             </thead>
@@ -66,7 +85,7 @@ export default async function AdminClearancesPage() {
                 <tr key={row.id}>
                   <td>{row.profiles?.full_name}</td>
                   <td>{row.boat_class_id}</td>
-                  <td>{row.clearance_level}</td>
+                  <td>{clearanceLabel(row.clearance_level)}</td>
                   <td>{formatEasternDateTime(row.approved_at)} ET</td>
                 </tr>
               ))}

@@ -67,7 +67,6 @@ export default async function AdminMembersPage() {
 
                 <Field label="Skill Level">
                   <select name="skill_level" defaultValue={m.skill_level}>
-                    <option value="LTR">LTR</option>
                     <option value="Beginner">Beginner</option>
                     <option value="Intermediate">Intermediate</option>
                     <option value="Advanced">Advanced</option>
