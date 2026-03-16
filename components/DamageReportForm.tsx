@@ -6,7 +6,7 @@ export function DamageReportForm() {
   return (
     <form action={submitDamageAction} className="card form-grid">
       <h2>New Damage Report</h2>
-      <p className="muted">Attach clear notes and at least one stored photo path.</p>
+      <p className="muted">Attach clear notes. Photos are optional and can be added from your phone or computer.</p>
 
       <Field label="Reservation ID (optional)">
         <input name="reservation_id" />
@@ -23,13 +23,15 @@ export function DamageReportForm() {
       <Field label="Description">
         <textarea name="description" rows={4} required />
       </Field>
-      <Field label="Photo storage paths (one per line)">
+      <Field label="Photo storage paths (optional, one per line)">
         <textarea
           name="photo_paths"
           rows={4}
           placeholder={"damage/<report-id>/photo1.jpg\\ndamage/<report-id>/photo2.jpg"}
-          required
         />
+      </Field>
+      <Field label="Upload photos (optional)">
+        <input name="photos" type="file" accept="image/*" multiple />
       </Field>
       <Button type="submit">Submit Damage</Button>
     </form>

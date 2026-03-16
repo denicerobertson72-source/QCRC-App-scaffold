@@ -51,6 +51,14 @@ function parseCrew(value: FormDataEntryValue | null) {
     .filter(Boolean);
 }
 
+function appendCrewNamesToNotes(notes: string, crewNames: string) {
+  const trimmedNotes = notes.trim();
+  const trimmedCrew = crewNames.trim();
+  if (!trimmedCrew) return trimmedNotes;
+  const crewLine = `Crew: ${trimmedCrew}`;
+  return trimmedNotes ? `${trimmedNotes}\n${crewLine}` : crewLine;
+}
+
 export async function reserveBoatAction(formData: FormData) {
   const { supabase } = await ensureProfile();
 
@@ -59,16 +67,18 @@ export async function reserveBoatAction(formData: FormData) {
   const endTime = String(formData.get("end_time") ?? "");
   const checkoutLocation = String(formData.get("checkout_location") ?? "");
   const notes = String(formData.get("notes") ?? "");
-  const crew = parseCrew(formData.get("crew"));
+  const crewNames = String(formData.get("crew_names") ?? "");
+  const crew = [] as string[];
   const rawReturnTo = String(formData.get("return_to") ?? "/reserve");
   const returnTo = rawReturnTo.startsWith("/") ? rawReturnTo : "/reserve";
+  const finalNotes = appendCrewNamesToNotes(notes, crewNames);
 
   const result = await supabase.rpc("reserve_boat", {
     p_boat_id: boatId,
     p_start_time: startTime,
     p_end_time: endTime,
     p_checkout_location: checkoutLocation || null,
-    p_notes: notes || null,
+    p_notes: finalNotes || null,
     p_crew: crew,
   });
 
@@ -91,36 +101,128 @@ export async function reserveBoatAction(formData: FormData) {
   redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
 }
 
+export async function updateReservationAction(formData: FormData) {
+  const { supabase, user } = await ensureProfile();
+  const reservationId = String(formData.get("reservation_id") ?? "");
+  const startTime = String(formData.get("start_time") ?? "");
+  const endTime = String(formData.get("end_time") ?? "");
+  const checkoutLocation = String(formData.get("checkout_location") ?? "");
+  const notes = String(formData.get("notes") ?? "");
+  const crewNames = String(formData.get("crew_names") ?? "");
+  const finalNotes = appendCrewNamesToNotes(notes, crewNames);
+
+  const { error } = await supabase
+    .from("reservations")
+    .update({
+      start_time: startTime,
+      end_time: endTime,
+      checkout_location: checkoutLocation || null,
+      notes: finalNotes || null,
+    })
+    .eq("id", reservationId)
+    .eq("created_by", user.id)
+    .eq("status", "reserved");
+
+  const destination = new URL("/reservations", "http://local");
+  if (error) {
+    destination.searchParams.set("reservation_status", "error");
+    destination.searchParams.set("reservation_message", error.message || "Unable to update reservation.");
+    redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+  }
+
+  revalidatePath("/reservations");
+  revalidatePath("/reserve");
+  destination.searchParams.set("reservation_status", "success");
+  destination.searchParams.set("reservation_message", "Reservation updated.");
+  redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+}
+
+export async function cancelReservationAction(formData: FormData) {
+  const { supabase, user } = await ensureProfile();
+  const reservationId = String(formData.get("reservation_id") ?? "");
+
+  const { error } = await supabase
+    .from("reservations")
+    .update({ status: "cancelled" })
+    .eq("id", reservationId)
+    .eq("created_by", user.id)
+    .eq("status", "reserved");
+
+  const destination = new URL("/reservations", "http://local");
+  if (error) {
+    destination.searchParams.set("reservation_status", "error");
+    destination.searchParams.set("reservation_message", error.message || "Unable to cancel reservation.");
+    redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+  }
+
+  revalidatePath("/reservations");
+  revalidatePath("/reserve");
+  destination.searchParams.set("reservation_status", "success");
+  destination.searchParams.set("reservation_message", "Reservation cancelled.");
+  redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+}
+
 export async function checkoutAction(formData: FormData) {
   const { supabase } = await ensureProfile();
   const reservationId = String(formData.get("reservation_id") ?? "");
   const location = String(formData.get("location") ?? "");
+  const direction = String(formData.get("river_direction") ?? "");
+
+  const destination = new URL("/reservations", "http://local");
 
   const { error } = await supabase.rpc("checkout_reservation", {
     p_reservation_id: reservationId,
     p_location: location || null,
   });
 
-  if (error) throw error;
+  if (error) {
+    destination.searchParams.set("reservation_status", "error");
+    destination.searchParams.set("reservation_message", error.message || "Unable to launch.");
+    redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+  }
+
+  if (direction) {
+    const updateResult = await supabase.from("reservations").update({ river_direction: direction }).eq("id", reservationId);
+    if (updateResult.error) {
+      destination.searchParams.set("reservation_status", "error");
+      destination.searchParams.set("reservation_message", updateResult.error.message || "Launch recorded, but direction was not saved.");
+      redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+    }
+  }
+
   revalidatePath("/reservations");
+  revalidatePath("/safety");
+  destination.searchParams.set("reservation_status", "success");
+  destination.searchParams.set("reservation_message", "Launch recorded.");
+  redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
 }
 
 export async function checkinAction(formData: FormData) {
   const { supabase } = await ensureProfile();
   const reservationId = String(formData.get("reservation_id") ?? "");
   const notes = String(formData.get("notes") ?? "");
+  const destination = new URL("/reservations", "http://local");
 
   const { error } = await supabase.rpc("checkin_reservation", {
     p_reservation_id: reservationId,
     p_notes: notes || null,
   });
 
-  if (error) throw error;
+  if (error) {
+    destination.searchParams.set("reservation_status", "error");
+    destination.searchParams.set("reservation_message", error.message || "Unable to mark returned.");
+    redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+  }
+
   revalidatePath("/reservations");
+  revalidatePath("/safety");
+  destination.searchParams.set("reservation_status", "success");
+  destination.searchParams.set("reservation_message", "Return recorded.");
+  redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
 }
 
 export async function submitDamageAction(formData: FormData) {
-  const { supabase } = await ensureProfile();
+  const { supabase, user } = await ensureProfile();
 
   const reservationId = String(formData.get("reservation_id") ?? "");
   const boatId = String(formData.get("boat_id") ?? "");
@@ -132,17 +234,46 @@ export async function submitDamageAction(formData: FormData) {
     .split("\n")
     .map((v) => v.trim())
     .filter(Boolean);
+  const uploadedFiles = formData
+    .getAll("photos")
+    .filter((entry): entry is File => typeof File !== "undefined" && entry instanceof File && entry.size > 0);
 
-  const { error } = await supabase.rpc("submit_damage_report", {
-    p_reservation_id: reservationId || null,
-    p_boat_id: boatId,
-    p_severity: severity,
-    p_description: description,
-    p_photo_paths: photoPaths,
-    p_responsible_member_id: responsibleMemberId || null,
-  });
+  const uploadedPaths: string[] = [];
+  for (const file of uploadedFiles) {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const storagePath = `${Date.now()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage.from("damage-photos").upload(storagePath, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+    if (uploadError) throw uploadError;
+    uploadedPaths.push(storagePath);
+  }
 
-  if (error) throw error;
+  const allPhotoPaths = [...photoPaths, ...uploadedPaths];
+
+  if (allPhotoPaths.length > 0) {
+    const { error } = await supabase.rpc("submit_damage_report", {
+      p_reservation_id: reservationId || null,
+      p_boat_id: boatId,
+      p_severity: severity,
+      p_description: description,
+      p_photo_paths: allPhotoPaths,
+      p_responsible_member_id: responsibleMemberId || null,
+    });
+
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("damage_reports").insert({
+      reservation_id: reservationId || null,
+      boat_id: boatId,
+      reported_by: user.id,
+      responsible_member_id: responsibleMemberId || null,
+      severity,
+      description,
+    });
+    if (error) throw error;
+  }
 
   revalidatePath("/damage/new");
   revalidatePath("/reservations");
@@ -427,6 +558,7 @@ export async function saveRaceSignupAction(formData: FormData) {
   const raceEventId = String(formData.get("race_event_id") ?? "");
   const attending = String(formData.get("attending") ?? "true") === "true";
   const birthdate = String(formData.get("birthdate") ?? "");
+  const desiredRaceCount = Number(formData.get("desired_race_count") ?? 1);
   const wants1x = String(formData.get("wants_1x") ?? "false") === "true";
   const wants2x = String(formData.get("wants_2x") ?? "false") === "true";
   const wants4x = String(formData.get("wants_4x") ?? "false") === "true";
@@ -444,6 +576,7 @@ export async function saveRaceSignupAction(formData: FormData) {
         race_event_id: raceEventId,
         member_id: user.id,
         birthdate,
+        desired_race_count: desiredRaceCount,
         wants_1x: wants1x,
         wants_2x: wants2x,
         wants_4x: wants4x,

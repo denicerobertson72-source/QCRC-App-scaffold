@@ -1,5 +1,5 @@
 import { ensureProfile } from "@/lib/auth";
-import type { Boat, BoatAvailabilityBlock, ProfileSummary, ProgramSession, Reservation } from "@/lib/types";
+import type { Boat, BoatAvailabilityBlock, ProfileSummary, ProgramSession, Reservation, SafetyEntry } from "@/lib/types";
 
 function profileNameFromRelation(profileRelation: unknown) {
   if (Array.isArray(profileRelation)) {
@@ -17,7 +17,7 @@ export async function getMyReservations() {
 
   const { data, error } = await supabase
     .from("reservations")
-    .select("id, boat_id, created_by, start_time, end_time, status, checked_out_at, checked_in_at, checkout_location, notes, boats(name)")
+    .select("id, boat_id, created_by, start_time, end_time, status, checked_out_at, checked_in_at, checkout_location, river_direction, notes, boats(name)")
     .or(`created_by.eq.${user.id}`)
     .order("start_time", { ascending: true });
 
@@ -105,14 +105,15 @@ export async function getRaceEventsWithMySignup() {
 
   const { data: signups, error: signupsError } = await supabase
     .from("race_signups")
-    .select("race_event_id, birthdate, wants_1x, wants_2x, wants_4x")
+    .select("race_event_id, birthdate, desired_race_count, wants_1x, wants_2x, wants_4x")
     .eq("member_id", user.id);
   if (signupsError) throw signupsError;
 
-  const signupByRace = new Map<string, { birthdate: string; wants_1x: boolean; wants_2x: boolean; wants_4x: boolean }>();
+  const signupByRace = new Map<string, { birthdate: string; desired_race_count: number; wants_1x: boolean; wants_2x: boolean; wants_4x: boolean }>();
   for (const signup of signups ?? []) {
     signupByRace.set(signup.race_event_id, {
       birthdate: signup.birthdate,
+      desired_race_count: signup.desired_race_count ?? 1,
       wants_1x: signup.wants_1x,
       wants_2x: signup.wants_2x,
       wants_4x: signup.wants_4x,
@@ -307,4 +308,42 @@ export async function getProgramSessionsForMonth(programTypes: string[], monthSt
     my_signed_up: mine.has(session.id),
     signup_count: countBySession.get(session.id) ?? 0,
   })) as ProgramSession[];
+}
+
+export async function getSafetyDashboard() {
+  const { supabase } = await ensureProfile();
+  const { data, error } = await supabase
+    .from("reservations")
+    .select("id, start_time, end_time, status, checked_out_at, checked_in_at, checkout_location, river_direction, boats(name), profiles!reservations_created_by_fkey(full_name)")
+    .in("status", ["checked_out", "checked_in"])
+    .order("checked_out_at", { ascending: false })
+    .limit(40);
+
+  if (error) throw error;
+
+  const now = Date.now();
+  const rows = (data ?? []).map((row: any) => {
+    const boat = Array.isArray(row.boats) ? row.boats[0] : row.boats;
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const checkedOutTime = row.checked_out_at ? new Date(row.checked_out_at).getTime() : null;
+
+    return {
+      id: row.id,
+      boat_name: boat?.name ?? row.id,
+      rower_name: profile?.full_name ?? "Unknown",
+      start_time: row.start_time,
+      end_time: row.end_time,
+      checked_out_at: row.checked_out_at,
+      checked_in_at: row.checked_in_at,
+      checkout_location: row.checkout_location,
+      river_direction: row.river_direction,
+      status: row.status,
+      is_overdue: row.status === "checked_out" && checkedOutTime !== null && now - checkedOutTime >= 2 * 60 * 60 * 1000,
+    } satisfies SafetyEntry;
+  });
+
+  return {
+    onWater: rows.filter((row) => row.status === "checked_out"),
+    recentLog: rows,
+  };
 }

@@ -33,8 +33,8 @@ export function ReservationForm({ boat, start, end, returnTo }: { boat: Boat; st
       <Field label="End">
         <input name="end_time" type="datetime-local" defaultValue={end} required />
       </Field>
-      <Field label="Crew IDs (comma-separated UUIDs)">
-        <input name="crew" placeholder="uuid1,uuid2" />
+      <Field label="Crew Names (optional)">
+        <input name="crew_names" placeholder="Jane Doe, Sam Smith" />
       </Field>
       <Field label="Location">
         <input name="checkout_location" placeholder="Main Dock" />

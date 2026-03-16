@@ -13,7 +13,7 @@ export default async function RacingProgramPage() {
     <>
       <TopNav />
       <main className="stack">
-        <PageTitle title="Racing Signups" subtitle="Pick races, enter birthdate, and choose your preferred boat classes." />
+        <PageTitle title="Racing Signups" subtitle="Pick races, enter birthdate, choose preferred boat classes, and note how many races you want to row." />
 
         <div className="stack">
           {events.length === 0 ? <Card subtle>No races posted yet.</Card> : null}
@@ -31,6 +31,15 @@ export default async function RacingProgramPage() {
 
                 <Field label="Birthdate">
                   <input name="birthdate" type="date" defaultValue={event.my_signup?.birthdate ?? ""} required />
+                </Field>
+
+                <Field label="Number of races">
+                  <select name="desired_race_count" defaultValue={String(event.my_signup?.desired_race_count ?? 1)}>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                  </select>
                 </Field>
 
                 <div className="row">

@@ -5,6 +5,12 @@ import { getMyReservations } from "@/lib/queries";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { Card } from "@/components/ui/Card";
 import { PageTitle } from "@/components/ui/PageTitle";
+import { FlashNotice } from "@/components/ui/FlashNotice";
+
+type SearchParams = Promise<{
+  reservation_status?: string;
+  reservation_message?: string;
+}>;
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -20,9 +26,12 @@ function reservationStatusKind(status: string): "default" | "reserved" | "checke
   return "default";
 }
 
-export default async function ReservationsPage() {
+export default async function ReservationsPage({ searchParams }: { searchParams: SearchParams }) {
+  const params = await searchParams;
   const reservations = await getMyReservations();
   const activeCount = reservations.filter((reservation) => reservation.status === "reserved" || reservation.status === "checked_out").length;
+  const reservationStatus = params.reservation_status === "error" ? "error" : params.reservation_status === "success" ? "success" : null;
+  const reservationMessage = params.reservation_message ?? "";
 
   return (
     <>
@@ -41,6 +50,8 @@ export default async function ReservationsPage() {
           />
         </section>
 
+        {reservationStatus && reservationMessage ? <FlashNotice status={reservationStatus} message={reservationMessage} /> : null}
+
         <div className="stack">
           {reservations.length === 0 ? <Card subtle>No reservations yet.</Card> : null}
           {reservations.map((reservation) => (
@@ -52,6 +63,12 @@ export default async function ReservationsPage() {
               <p className="muted">
                 {formatDateTime(reservation.start_time)} to {formatDateTime(reservation.end_time)}
               </p>
+              {reservation.checked_out_at ? (
+                <p className="muted">
+                  Launch: {reservation.checkout_location ?? "Location not set"}
+                  {reservation.river_direction ? ` | ${reservation.river_direction}` : ""}
+                </p>
+              ) : null}
               <ReservationActions reservation={reservation} />
             </Card>
           ))}
