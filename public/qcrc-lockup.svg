@@ -1,38 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
   <title id="title">QCRC logo</title>
-  <desc id="desc">Compact QCRC mark with crown, black C, crossed oars, and QCRC wordmark.</desc>
+  <desc id="desc">QCRC logo with orange crown, black C, crossed oars, and QCRC wordmark.</desc>
   <defs>
     <style>
       .orange { fill: #f94b23; stroke: #f94b23; }
-      .black { fill: #090909; stroke: #090909; }
-      .white { fill: #ffffff; stroke: #ffffff; }
-      .shaft { stroke: #111111; stroke-width: 5.5; stroke-linecap: round; }
-      .outline { stroke: #111111; stroke-width: 1.2; stroke-linejoin: round; }
-      .word { font: 900 26px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: 1px; }
+      .black-fill { fill: #0a0a0a; }
+      .black-stroke { stroke: #0a0a0a; stroke-linecap: round; }
+      .white { fill: #ffffff; stroke: #0a0a0a; stroke-width: 1; stroke-linejoin: round; }
+      .word { font: 900 30px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: 1px; }
     </style>
   </defs>
 
-  <g transform="translate(110 98)">
-    <g transform="translate(0 -40)">
-      <circle class="orange" cx="-36" cy="-44" r="8"/>
+  <g transform="translate(128 128)">
+    <g transform="translate(0 -28)">
+      <circle class="orange" cx="-52" cy="-66" r="8" />
       <path
         class="orange"
-        d="M-70 -18c-12 0-21-9-21-21 0-18 14-33 32-33 10 0 19 4 26 11 7-10 18-16 31-16 13 0 24 6 31 16 7-7 17-11 28-11 19 0 33 15 33 35 0 11-4 22-10 29h-18c7-7 11-16 11-27 0-11-7-19-16-19-11 0-19 8-19 19v27H65v-29c0-10-8-18-18-18-11 0-19 8-19 19v28H11v-29c0-10-8-18-18-18-11 0-20 9-20 20 0 10 7 19 17 22l-12 13-48-38c-7-6-11-15-11-24 0-18 14-32 31-32 10 0 18 4 24 11l7 8 7-8c7-8 18-12 29-12 13 0 24 6 31 15 8-9 20-15 33-15 23 0 41 18 41 42 0 10-4 20-10 28h-19c8-7 12-17 12-27 0-14-10-25-23-25-14 0-24 11-24 25v24H50v-24c0-14-10-25-23-25-14 0-24 11-24 25v23H-14v-24c0-14-10-25-23-25-13 0-24 11-24 24 0 8 4 16 10 20l28 22-11 13-36-28c-8-6-13-16-13-27 0-20 16-36 36-36 11 0 21 4 28 12 8-10 20-16 33-16 14 0 27 6 35 17 8-11 21-17 35-17 21 0 38 17 38 39 0 8-2 15-6 22H-70z" />
-      <path class="orange" d="M-90 3 55 -47" stroke="#f94b23" stroke-width="13" stroke-linecap="round" fill="none"/>
+        d="M-95 -32c0-16 12-29 28-29 9 0 17 4 23 11 6-10 17-16 29-16 12 0 22 6 28 15 6-9 16-15 28-15 19 0 33 15 33 35 0 11-4 20-11 27l-11-9c4-5 7-10 7-17 0-10-7-18-17-18-12 0-19 9-19 22v20h-15v-22c0-12-8-20-18-20-12 0-19 9-19 22v21h-14v-22c0-12-8-20-18-20-11 0-20 9-20 20 0 6 3 12 8 16l-11 10c-10-7-16-18-16-31z" />
+      <path class="orange" d="M-90 -4 68 -54" stroke="#f94b23" stroke-width="11" stroke-linecap="round" fill="none" />
       <path
-        class="black"
-        d="M13 -22c-30 0-55 24-55 55s25 55 55 55c15 0 31-7 43-20L37 54c-7 8-15 12-25 12-18 0-32-15-32-33 0-19 14-33 32-33 10 0 18 4 25 12l18-12C44 -14 29 -22 13 -22z"/>
+        class="black-fill"
+        d="M11 -10c-31 0-57 25-57 57s26 57 57 57c16 0 31-6 43-18l-18-16c-7 7-15 11-24 11-19 0-33-15-33-34s14-34 33-34c9 0 18 4 25 11l18-13C43 -4 28 -10 11 -10z" />
     </g>
 
-    <g>
-      <line class="shaft" x1="-84" y1="16" x2="0" y2="-21"/>
-      <line class="shaft" x1="84" y1="16" x2="0" y2="-21"/>
-      <polygon class="orange outline" points="-100,8 -82,0 -68,9 -87,17"/>
-      <polygon class="orange outline" points="100,8 82,0 68,9 87,17"/>
-      <polygon class="white outline" points="-87,17 -68,9 -60,14 -79,22"/>
-      <polygon class="white outline" points="87,17 68,9 60,14 79,22"/>
+    <g transform="translate(0 20)">
+      <line class="black-stroke" x1="-100" y1="20" x2="0" y2="-24" stroke-width="5.5" />
+      <line class="black-stroke" x1="100" y1="20" x2="0" y2="-24" stroke-width="5.5" />
+      <polygon class="orange" points="-114,11 -96,2 -82,11 -100,19" />
+      <polygon class="orange" points="114,11 96,2 82,11 100,19" />
+      <polygon class="white" points="-100,19 -82,11 -74,16 -92,24" />
+      <polygon class="white" points="100,19 82,11 74,16 92,24" />
     </g>
 
-    <text class="orange word" x="0" y="62" text-anchor="middle">QCRC</text>
+    <text class="orange word" x="0" y="96" text-anchor="middle">QCRC</text>
   </g>
 </svg>
