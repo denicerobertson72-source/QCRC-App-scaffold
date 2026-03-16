@@ -8,11 +8,6 @@ export function TopNav() {
       <nav>
         <Link href="/reservations" className="topnav-brand" aria-label="QCRC home">
           <img src="/qcrc-lockup.svg" alt="QCRC" className="topnav-logo" />
-          <span className="topnav-brand-text">
-            Queen City
-            <br />
-            Rowing Club
-          </span>
         </Link>
         <Link href="/reservations">Reservations</Link>
         <Link href="/reserve">Reserve</Link>

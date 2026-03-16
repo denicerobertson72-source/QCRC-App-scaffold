@@ -135,7 +135,6 @@ a:hover {
 .topnav-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.85rem;
   margin-right: var(--space-2);
   padding-right: 0.8rem;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
@@ -146,19 +145,10 @@ a:hover {
 }
 
 .topnav-logo {
-  width: 82px;
+  width: 72px;
   height: auto;
   display: block;
   filter: drop-shadow(0 10px 18px rgba(255, 90, 31, 0.22));
-}
-
-.topnav-brand-text {
-  color: #fff7f1;
-  font-size: 0.72rem;
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .card {
@@ -355,10 +345,6 @@ thead th {
     padding-right: 0;
     margin-right: 0;
   }
-
-  .topnav-brand-text {
-    display: none;
-  }
 }
 
 @media (max-width: 820px) {
@@ -371,6 +357,6 @@ thead th {
   }
 
   .topnav-logo {
-    width: 68px;
+    width: 62px;
   }
 }

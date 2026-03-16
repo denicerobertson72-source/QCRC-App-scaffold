@@ -252,12 +252,14 @@ export async function getPublishedLineups() {
 
 export async function getProgramSessionsForMonth(programTypes: string[], monthStartIso: string, monthEndIso: string) {
   const { supabase, user } = await ensureProfile();
+  const nowIso = new Date().toISOString();
+  const effectiveStartIso = monthStartIso > nowIso ? monthStartIso : nowIso;
 
   const { data: sessions, error: sessionsError } = await supabase
     .from("sessions")
     .select("id, title, session_type, starts_at, ends_at, location, notes, is_cancelled, cancelled_reason")
     .in("session_type", programTypes)
-    .gte("starts_at", monthStartIso)
+    .gte("starts_at", effectiveStartIso)
     .lt("starts_at", monthEndIso)
     .order("starts_at", { ascending: true });
   if (sessionsError) throw sessionsError;
