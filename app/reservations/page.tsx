@@ -61,9 +61,9 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
                 <StatusChip label={reservation.status.replace("_", " ")} kind={reservationStatusKind(reservation.status)} />
               </div>
               <p className="muted">
-                {formatDateTime(reservation.start_time)} to {formatDateTime(reservation.end_time)}
+                {formatDateTime(reservation.start_time)} to {new Intl.DateTimeFormat("en-US", { timeStyle: "short" }).format(new Date(reservation.end_time))}
               </p>
-              {reservation.checked_out_at ? (
+              {reservation.status !== "reserved" && reservation.checked_out_at ? (
                 <p className="muted">
                   Launch: {reservation.checkout_location ?? "Location not set"}
                   {reservation.river_direction ? ` | ${reservation.river_direction}` : ""}
