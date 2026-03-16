@@ -34,8 +34,23 @@ export type Reservation = {
   checked_out_at: string | null;
   checked_in_at: string | null;
   checkout_location: string | null;
+  river_direction?: string | null;
   notes: string | null;
   boats?: { name: string } | null;
+};
+
+export type SafetyEntry = {
+  id: string;
+  boat_name: string;
+  rower_name: string;
+  start_time: string;
+  end_time: string;
+  checked_out_at: string | null;
+  checked_in_at: string | null;
+  checkout_location: string | null;
+  river_direction: string | null;
+  status: string;
+  is_overdue: boolean;
 };
 
 export type BoatAvailabilityBlock = {

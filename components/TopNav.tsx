@@ -16,6 +16,7 @@ export async function TopNav() {
           <Link href="/reservations">Reservations</Link>
         </div>
         <Link href="/reserve">Reserve</Link>
+        <Link href="/safety">Safety</Link>
         <Link href="/programs">Programs</Link>
         <Link href="/lineups">Lineups</Link>
         <Link href="/boats">Boats</Link>
