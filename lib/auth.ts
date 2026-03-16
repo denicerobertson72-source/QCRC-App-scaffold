@@ -41,3 +41,13 @@ export async function ensureAdminProfile() {
   }
   return { supabase, user };
 }
+
+export async function ensureSiteAdmin() {
+  const { supabase, user } = await ensureProfile();
+  const { data, error } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (error) throw error;
+  if (!data || data.role !== "admin") {
+    redirect("/reservations");
+  }
+  return { supabase, user };
+}

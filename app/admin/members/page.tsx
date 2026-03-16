@@ -1,5 +1,5 @@
 import { TopNav } from "@/components/TopNav";
-import { ensureProfile } from "@/lib/auth";
+import { ensureSiteAdmin } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { Field } from "@/components/ui/Field";
@@ -8,7 +8,7 @@ import { updateMemberAdminAction } from "@/lib/actions";
 import { InviteMemberForm } from "@/components/admin/InviteMemberForm";
 
 export default async function AdminMembersPage() {
-  const { supabase } = await ensureProfile();
+  const { supabase } = await ensureSiteAdmin();
   const { data } = await supabase
     .from("profiles")
     .select("id, full_name, email, role, status, dues_ok, membership_type, skill_level, weight_class")

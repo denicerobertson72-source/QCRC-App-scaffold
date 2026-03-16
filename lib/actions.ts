@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { ensureProfile } from "@/lib/auth";
+import { ensureProfile, ensureSiteAdmin } from "@/lib/auth";
 import { easternLocalInputToIso } from "@/lib/time";
 
 function skillLevelToClearance(level: string) {
@@ -35,6 +35,11 @@ async function assertAdmin() {
   if (!data || (data.role !== "admin" && data.role !== "equipment_manager" && data.role !== "coach")) {
     throw new Error("Admin permissions required");
   }
+  return { supabase, user };
+}
+
+async function assertSiteAdmin() {
+  const { supabase, user } = await ensureSiteAdmin();
   return { supabase, user };
 }
 
@@ -136,7 +141,7 @@ export async function signOutAction() {
 }
 
 export async function updateMemberAdminAction(formData: FormData) {
-  const { supabase } = await assertAdmin();
+  const { supabase } = await assertSiteAdmin();
   const memberId = String(formData.get("member_id") ?? "");
   const role = String(formData.get("role") ?? "member");
   const status = String(formData.get("status") ?? "active");
@@ -160,6 +165,7 @@ export async function updateMemberAdminAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/admin/members");
+  redirect("/admin/members");
 }
 
 export async function addBoatAdminAction(formData: FormData) {
