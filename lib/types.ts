@@ -19,6 +19,11 @@ export type ProfileSummary = {
   role: string;
   status: string;
   dues_ok: boolean;
+  dues_renewal_date?: string | null;
+  dues_last_paid_at?: string | null;
+  boat_storage_fee_ok?: boolean;
+  boat_storage_fee_renewal_date?: string | null;
+  boat_storage_fee_last_paid_at?: string | null;
   membership_type: string;
   skill_level: "Beginner" | "Intermediate" | "Advanced" | "Elite" | string;
   weight_class: "Lightweight" | "Mid-weight" | "Heavyweight" | string;
@@ -51,6 +56,15 @@ export type SafetyEntry = {
   river_direction: string | null;
   status: string;
   is_overdue: boolean;
+};
+
+export type OverdueBoatAlert = {
+  reservation_id: string;
+  boat_name: string;
+  rower_name: string;
+  checked_out_at: string;
+  checkout_location: string | null;
+  river_direction: string | null;
 };
 
 export type BoatAvailabilityBlock = {

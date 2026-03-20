@@ -30,6 +30,19 @@ export function formatEasternDate(value: string | Date) {
   });
 }
 
+export function getEasternDateKey(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ET_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 function getEasternOffsetMinutes(instant: Date) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: ET_TIMEZONE,

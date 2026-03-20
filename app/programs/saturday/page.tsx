@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { getProgramSessionsForMonth } from "@/lib/queries";
 import { toggleSessionSignupAction } from "@/lib/actions";
-import { formatEasternDateTime, formatEasternMonthLabel } from "@/lib/time";
+import { formatEasternDateTime, formatEasternMonthLabel, getEasternDateKey } from "@/lib/time";
 
 type SearchParams = Promise<{ month?: string }>;
 
@@ -35,7 +35,9 @@ function prettyDateTime(value: string) {
 export default async function SaturdayProgramPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const month = monthBounds(params.month);
-  const sessions = await getProgramSessionsForMonth(["saturday_coached_row"], month.start.toISOString(), month.end.toISOString());
+  const allSessions = await getProgramSessionsForMonth(["saturday_coached_row"], month.start.toISOString(), month.end.toISOString());
+  const todayEastern = getEasternDateKey(new Date());
+  const sessions = allSessions.filter((session) => getEasternDateKey(session.starts_at) >= todayEastern);
 
   return (
     <>

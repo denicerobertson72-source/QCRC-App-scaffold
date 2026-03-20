@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensureProfile, ensureSiteAdmin } from "@/lib/auth";
 import { easternLocalInputToIso } from "@/lib/time";
+import { formatCurrencyStatusLine, sendTransactionalEmail } from "@/lib/email";
 
 function skillLevelToClearance(level: string) {
   switch (level) {
@@ -222,62 +223,71 @@ export async function checkinAction(formData: FormData) {
 }
 
 export async function submitDamageAction(formData: FormData) {
-  const { supabase, user } = await ensureProfile();
+  const destination = new URL("/damage/new", "http://local");
+  try {
+    const { supabase, user } = await ensureProfile();
 
-  const reservationId = String(formData.get("reservation_id") ?? "");
-  const boatId = String(formData.get("boat_id") ?? "");
-  const severity = Number(formData.get("severity") ?? 1);
-  const description = String(formData.get("description") ?? "");
-  const responsibleMemberId = String(formData.get("responsible_member_id") ?? "");
-  const rawPaths = String(formData.get("photo_paths") ?? "");
-  const photoPaths = rawPaths
-    .split("\n")
-    .map((v) => v.trim())
-    .filter(Boolean);
-  const uploadedFiles = formData
-    .getAll("photos")
-    .filter((entry): entry is File => typeof File !== "undefined" && entry instanceof File && entry.size > 0);
+    const reservationId = String(formData.get("reservation_id") ?? "");
+    const boatId = String(formData.get("boat_id") ?? "");
+    const severity = Number(formData.get("severity") ?? 1);
+    const description = String(formData.get("description") ?? "");
+    const responsibleMemberId = String(formData.get("responsible_member_id") ?? "");
+    const rawPaths = String(formData.get("photo_paths") ?? "");
+    const photoPaths = rawPaths
+      .split("\n")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    const uploadedFiles = formData
+      .getAll("photos")
+      .filter((entry): entry is File => typeof File !== "undefined" && entry instanceof File && entry.size > 0);
 
-  const uploadedPaths: string[] = [];
-  for (const file of uploadedFiles) {
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-    const storagePath = `${Date.now()}-${safeName}`;
-    const { error: uploadError } = await supabase.storage.from("damage-photos").upload(storagePath, file, {
-      contentType: file.type || "application/octet-stream",
-      upsert: false,
-    });
-    if (uploadError) throw uploadError;
-    uploadedPaths.push(storagePath);
+    const uploadedPaths: string[] = [];
+    for (const file of uploadedFiles) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const storagePath = `${user.id}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from("damage-photos").upload(storagePath, file, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      });
+      if (uploadError) throw uploadError;
+      uploadedPaths.push(storagePath);
+    }
+
+    const allPhotoPaths = [...photoPaths, ...uploadedPaths];
+
+    if (allPhotoPaths.length > 0) {
+      const { error } = await supabase.rpc("submit_damage_report", {
+        p_reservation_id: reservationId || null,
+        p_boat_id: boatId,
+        p_severity: severity,
+        p_description: description,
+        p_photo_paths: allPhotoPaths,
+        p_responsible_member_id: responsibleMemberId || null,
+      });
+
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("damage_reports").insert({
+        reservation_id: reservationId || null,
+        boat_id: boatId,
+        reported_by: user.id,
+        responsible_member_id: responsibleMemberId || null,
+        severity,
+        description,
+      });
+      if (error) throw error;
+    }
+
+    revalidatePath("/damage/new");
+    revalidatePath("/reservations");
+    revalidatePath("/admin/damage");
+    destination.searchParams.set("damage_status", "success");
+    destination.searchParams.set("damage_message", "Damage report submitted.");
+  } catch (error) {
+    destination.searchParams.set("damage_status", "error");
+    destination.searchParams.set("damage_message", error instanceof Error ? error.message : "Damage report failed.");
   }
-
-  const allPhotoPaths = [...photoPaths, ...uploadedPaths];
-
-  if (allPhotoPaths.length > 0) {
-    const { error } = await supabase.rpc("submit_damage_report", {
-      p_reservation_id: reservationId || null,
-      p_boat_id: boatId,
-      p_severity: severity,
-      p_description: description,
-      p_photo_paths: allPhotoPaths,
-      p_responsible_member_id: responsibleMemberId || null,
-    });
-
-    if (error) throw error;
-  } else {
-    const { error } = await supabase.from("damage_reports").insert({
-      reservation_id: reservationId || null,
-      boat_id: boatId,
-      reported_by: user.id,
-      responsible_member_id: responsibleMemberId || null,
-      severity,
-      description,
-    });
-    if (error) throw error;
-  }
-
-  revalidatePath("/damage/new");
-  revalidatePath("/reservations");
-  revalidatePath("/admin/damage");
+  redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
 }
 
 export async function signOutAction() {
@@ -294,23 +304,67 @@ export async function updateMemberAdminAction(formData: FormData) {
   const status = String(formData.get("status") ?? "active");
   const membershipType = String(formData.get("membership_type") ?? "community");
   const duesOk = String(formData.get("dues_ok") ?? "false") === "true";
+  const duesRenewalDateRaw = String(formData.get("dues_renewal_date") ?? "");
+  const duesRenewalDate = duesRenewalDateRaw || null;
+  const boatStorageFeeOk = String(formData.get("boat_storage_fee_ok") ?? "false") === "true";
+  const boatStorageFeeRenewalDateRaw = String(formData.get("boat_storage_fee_renewal_date") ?? "");
+  const boatStorageFeeRenewalDate = boatStorageFeeRenewalDateRaw || null;
   const skillLevel = String(formData.get("skill_level") ?? "Beginner");
   const weightClass = String(formData.get("weight_class") ?? "Mid-weight");
 
+  const { data: existingMember, error: existingMemberError } = await supabase
+    .from("profiles")
+    .select("full_name, email, dues_ok, dues_renewal_date, boat_storage_fee_ok, boat_storage_fee_renewal_date")
+    .eq("id", memberId)
+    .single();
+  if (existingMemberError) throw existingMemberError;
+
+  const updatePayload = {
+    role,
+    status,
+    membership_type: membershipType,
+    dues_ok: duesOk,
+    dues_renewal_date: duesRenewalDate,
+    dues_last_paid_at: duesOk && !existingMember.dues_ok ? new Date().toISOString() : undefined,
+    skill_level: skillLevel,
+    weight_class: weightClass,
+    boat_storage_fee_ok: boatStorageFeeOk,
+    boat_storage_fee_renewal_date: boatStorageFeeRenewalDate,
+    boat_storage_fee_last_paid_at:
+      boatStorageFeeOk && !existingMember.boat_storage_fee_ok ? new Date().toISOString() : undefined,
+    waiver_signed_at: duesOk ? new Date().toISOString() : null,
+  };
+
   const { error } = await supabase
     .from("profiles")
-    .update({
-      role,
-      status,
-      membership_type: membershipType,
-      dues_ok: duesOk,
-      skill_level: skillLevel,
-      weight_class: weightClass,
-      waiver_signed_at: duesOk ? new Date().toISOString() : null,
-    })
+    .update(updatePayload)
     .eq("id", memberId);
 
   if (error) throw error;
+
+  const paymentLines: string[] = [];
+  if (duesOk && !existingMember.dues_ok) {
+    paymentLines.push(formatCurrencyStatusLine("Annual dues", duesOk, duesRenewalDate));
+  }
+  if (boatStorageFeeOk && !existingMember.boat_storage_fee_ok) {
+    paymentLines.push(formatCurrencyStatusLine("Boat storage fee", boatStorageFeeOk, boatStorageFeeRenewalDate));
+  }
+
+  if (existingMember.email && paymentLines.length > 0) {
+    try {
+      await sendTransactionalEmail({
+        to: existingMember.email,
+        subject: "QCRC payment confirmation",
+        text: `Hello ${existingMember.full_name},\n\nThe following payment status was confirmed by club admin:\n${paymentLines.join("\n")}\n\nThank you.\nQCRC`,
+        html: `<p>Hello ${existingMember.full_name},</p><p>The following payment status was confirmed by club admin:</p><ul>${paymentLines
+          .map((line) => `<li>${line}</li>`)
+          .join("")}</ul><p>Thank you.<br/>QCRC</p>`,
+      });
+    } catch {
+      // Payment updates should not fail because outbound email is unavailable.
+    }
+  }
+
   revalidatePath("/admin/members");
   redirect("/admin/members");
 }

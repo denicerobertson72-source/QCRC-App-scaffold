@@ -11,7 +11,9 @@ export default async function AdminMembersPage() {
   const { supabase } = await ensureSiteAdmin();
   const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, status, dues_ok, membership_type, skill_level, weight_class")
+    .select(
+      "id, full_name, email, role, status, dues_ok, dues_renewal_date, membership_type, skill_level, weight_class, boat_storage_fee_ok, boat_storage_fee_renewal_date",
+    )
     .order("full_name");
 
   return (
@@ -63,6 +65,25 @@ export default async function AdminMembersPage() {
                     <option value="true">paid</option>
                     <option value="false">due</option>
                   </select>
+                </Field>
+
+                <Field label="Dues Renewal Date">
+                  <input name="dues_renewal_date" type="date" defaultValue={m.dues_renewal_date ?? ""} />
+                </Field>
+
+                <Field label="Boat Storage Fee">
+                  <select name="boat_storage_fee_ok" defaultValue={m.boat_storage_fee_ok ? "true" : "false"}>
+                    <option value="true">paid</option>
+                    <option value="false">due</option>
+                  </select>
+                </Field>
+
+                <Field label="Boat Storage Renewal Date">
+                  <input
+                    name="boat_storage_fee_renewal_date"
+                    type="date"
+                    defaultValue={m.boat_storage_fee_renewal_date ?? ""}
+                  />
                 </Field>
 
                 <Field label="Skill Level">

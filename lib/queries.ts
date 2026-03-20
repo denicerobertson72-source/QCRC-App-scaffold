@@ -1,5 +1,5 @@
 import { ensureProfile } from "@/lib/auth";
-import type { Boat, BoatAvailabilityBlock, ProfileSummary, ProgramSession, Reservation, SafetyEntry } from "@/lib/types";
+import type { Boat, BoatAvailabilityBlock, OverdueBoatAlert, ProfileSummary, ProgramSession, Reservation, SafetyEntry } from "@/lib/types";
 
 function profileNameFromRelation(profileRelation: unknown) {
   if (Array.isArray(profileRelation)) {
@@ -18,6 +18,7 @@ export async function getMyReservations() {
   const { data, error } = await supabase
     .from("reservations")
     .select("id, boat_id, created_by, start_time, end_time, status, checked_out_at, checked_in_at, checkout_location, river_direction, notes, boats(name)")
+    .in("status", ["reserved", "checked_out"])
     .or(`created_by.eq.${user.id}`)
     .order("start_time", { ascending: true });
 
@@ -53,7 +54,9 @@ export async function getMyProfileSummary() {
   const { supabase, user } = await ensureProfile();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, status, dues_ok, membership_type, skill_level, weight_class")
+    .select(
+      "id, full_name, email, role, status, dues_ok, dues_renewal_date, dues_last_paid_at, boat_storage_fee_ok, boat_storage_fee_renewal_date, boat_storage_fee_last_paid_at, membership_type, skill_level, weight_class",
+    )
     .eq("id", user.id)
     .single();
 
@@ -308,6 +311,13 @@ export async function getProgramSessionsForMonth(programTypes: string[], monthSt
     my_signed_up: mine.has(session.id),
     signup_count: countBySession.get(session.id) ?? 0,
   })) as ProgramSession[];
+}
+
+export async function getOverdueBoatAlerts() {
+  const { supabase } = await ensureProfile();
+  const { data, error } = await supabase.rpc("overdue_boat_summary");
+  if (error) throw error;
+  return (data ?? []) as OverdueBoatAlert[];
 }
 
 export async function getSafetyDashboard() {

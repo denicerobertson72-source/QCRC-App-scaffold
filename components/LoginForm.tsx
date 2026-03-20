@@ -96,6 +96,27 @@ export function LoginForm() {
     }
   }
 
+  async function sendResetPassword() {
+    setMessage(null);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/account/security?reset=1`,
+      });
+
+      if (resetError) {
+        setError(resetError.message);
+        return;
+      }
+
+      setMessage("Password reset email sent. Open the link in the same browser, then choose a new password.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unexpected password reset error");
+    }
+  }
+
   return (
     <form onSubmit={sendMagicLink} className="card form-grid">
       <h1>QCRC Login</h1>
@@ -125,6 +146,9 @@ export function LoginForm() {
           Create Password Login
         </Button>
       </div>
+      <Button type="button" variant="secondary" onClick={sendResetPassword} disabled={!email}>
+        Forgot / Reset Password
+      </Button>
       {!preferPassword ? (
         <Button type="submit">Send Magic Link</Button>
       ) : (
