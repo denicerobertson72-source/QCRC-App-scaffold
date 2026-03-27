@@ -41,8 +41,8 @@ export function DamageReportForm({
       <Field label="Severity (1-5)">
         <input name="severity" type="number" min={1} max={5} defaultValue={3} required />
       </Field>
-      <Field label="Responsible Member ID (optional)">
-        <input name="responsible_member_id" placeholder="Leave blank unless you have the member UUID" />
+      <Field label="Responsible Rower Name (optional)">
+        <input name="responsible_member_name" placeholder="Example: Jane Doe" />
       </Field>
       <Field label="Description">
         <textarea name="description" rows={4} required />

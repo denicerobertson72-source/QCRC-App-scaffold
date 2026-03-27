@@ -231,7 +231,7 @@ export async function submitDamageAction(formData: FormData) {
     const boatId = String(formData.get("boat_id") ?? "");
     const severity = Number(formData.get("severity") ?? 1);
     const description = String(formData.get("description") ?? "");
-    const responsibleMemberId = String(formData.get("responsible_member_id") ?? "");
+    const responsibleMemberName = String(formData.get("responsible_member_name") ?? "").trim();
     const rawPaths = String(formData.get("photo_paths") ?? "");
     const photoPaths = rawPaths
       .split("\n")
@@ -254,15 +254,18 @@ export async function submitDamageAction(formData: FormData) {
     }
 
     const allPhotoPaths = [...photoPaths, ...uploadedPaths];
+    const finalDescription = responsibleMemberName
+      ? `${description}\nResponsible rower: ${responsibleMemberName}`
+      : description;
 
     if (allPhotoPaths.length > 0) {
       const { error } = await supabase.rpc("submit_damage_report", {
         p_reservation_id: reservationId || null,
         p_boat_id: boatId,
         p_severity: severity,
-        p_description: description,
+        p_description: finalDescription,
         p_photo_paths: allPhotoPaths,
-        p_responsible_member_id: responsibleMemberId || null,
+        p_responsible_member_id: null,
       });
 
       if (error) throw error;
@@ -271,9 +274,9 @@ export async function submitDamageAction(formData: FormData) {
         reservation_id: reservationId || null,
         boat_id: boatId,
         reported_by: user.id,
-        responsible_member_id: responsibleMemberId || null,
+        responsible_member_id: null,
         severity,
-        description,
+        description: finalDescription,
       });
       if (error) throw error;
     }
