@@ -1,24 +1,48 @@
 import { submitDamageAction } from "@/lib/actions";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import type { Boat, Reservation } from "@/lib/types";
 
-export function DamageReportForm() {
+export function DamageReportForm({
+  boats,
+  reservations,
+}: {
+  boats: Boat[];
+  reservations: Reservation[];
+}) {
   return (
     <form action={submitDamageAction} className="card form-grid">
       <h2>New Damage Report</h2>
       <p className="muted">Attach clear notes. Photos are optional and can be added from your phone or computer.</p>
 
       <Field label="Reservation ID (optional)">
-        <input name="reservation_id" />
+        <select name="reservation_id" defaultValue="">
+          <option value="">No linked reservation</option>
+          {reservations.map((reservation) => (
+            <option key={reservation.id} value={reservation.id}>
+              {(reservation.boats?.name ?? reservation.boat_id)} | {new Date(reservation.start_time).toLocaleDateString("en-US")}
+            </option>
+          ))}
+        </select>
       </Field>
       <Field label="Boat ID">
-        <input name="boat_id" required />
+        <select name="boat_id" defaultValue="" required>
+          <option value="" disabled>
+            Select a boat
+          </option>
+          {boats.map((boat) => (
+            <option key={boat.id} value={boat.id}>
+              {boat.name}
+              {boat.boat_number ? ` #${boat.boat_number}` : ""}
+            </option>
+          ))}
+        </select>
       </Field>
       <Field label="Severity (1-5)">
         <input name="severity" type="number" min={1} max={5} defaultValue={3} required />
       </Field>
       <Field label="Responsible Member ID (optional)">
-        <input name="responsible_member_id" />
+        <input name="responsible_member_id" placeholder="Leave blank unless you have the member UUID" />
       </Field>
       <Field label="Description">
         <textarea name="description" rows={4} required />
