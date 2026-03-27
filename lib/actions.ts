@@ -371,15 +371,16 @@ export async function updateMemberAdminAction(formData: FormData) {
   const duesOk = String(formData.get("dues_ok") ?? "false") === "true";
   const duesRenewalDateRaw = String(formData.get("dues_renewal_date") ?? "");
   const duesRenewalDate = duesRenewalDateRaw || null;
+  const ownsPrivateBoat = String(formData.get("owns_private_boat") ?? "false") === "true";
   const boatStorageFeeOk = String(formData.get("boat_storage_fee_ok") ?? "false") === "true";
   const boatStorageFeeRenewalDateRaw = String(formData.get("boat_storage_fee_renewal_date") ?? "");
-  const boatStorageFeeRenewalDate = boatStorageFeeRenewalDateRaw || null;
+  const boatStorageFeeRenewalDate = ownsPrivateBoat ? boatStorageFeeRenewalDateRaw || null : null;
   const skillLevel = String(formData.get("skill_level") ?? "Beginner");
   const weightClass = String(formData.get("weight_class") ?? "Mid-weight");
 
   const { data: existingMember, error: existingMemberError } = await supabase
     .from("profiles")
-    .select("full_name, email, dues_ok, dues_renewal_date, boat_storage_fee_ok, boat_storage_fee_renewal_date")
+    .select("full_name, email, dues_ok, dues_renewal_date, owns_private_boat, boat_storage_fee_ok, boat_storage_fee_renewal_date")
     .eq("id", memberId)
     .single();
   if (existingMemberError) throw existingMemberError;
@@ -393,10 +394,11 @@ export async function updateMemberAdminAction(formData: FormData) {
     dues_last_paid_at: duesOk && !existingMember.dues_ok ? new Date().toISOString() : undefined,
     skill_level: skillLevel,
     weight_class: weightClass,
-    boat_storage_fee_ok: boatStorageFeeOk,
+    owns_private_boat: ownsPrivateBoat,
+    boat_storage_fee_ok: ownsPrivateBoat ? boatStorageFeeOk : false,
     boat_storage_fee_renewal_date: boatStorageFeeRenewalDate,
     boat_storage_fee_last_paid_at:
-      boatStorageFeeOk && !existingMember.boat_storage_fee_ok ? new Date().toISOString() : undefined,
+      ownsPrivateBoat && boatStorageFeeOk && !existingMember.boat_storage_fee_ok ? new Date().toISOString() : ownsPrivateBoat ? undefined : null,
     waiver_signed_at: duesOk ? new Date().toISOString() : null,
   };
 
@@ -411,7 +413,7 @@ export async function updateMemberAdminAction(formData: FormData) {
   if (duesOk && !existingMember.dues_ok) {
     paymentLines.push(formatCurrencyStatusLine("Annual dues", duesOk, duesRenewalDate));
   }
-  if (boatStorageFeeOk && !existingMember.boat_storage_fee_ok) {
+  if (ownsPrivateBoat && boatStorageFeeOk && !existingMember.boat_storage_fee_ok) {
     paymentLines.push(formatCurrencyStatusLine("Boat storage fee", boatStorageFeeOk, boatStorageFeeRenewalDate));
   }
 

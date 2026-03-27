@@ -21,6 +21,7 @@ export type ProfileSummary = {
   dues_ok: boolean;
   dues_renewal_date?: string | null;
   dues_last_paid_at?: string | null;
+  owns_private_boat?: boolean;
   boat_storage_fee_ok?: boolean;
   boat_storage_fee_renewal_date?: string | null;
   boat_storage_fee_last_paid_at?: string | null;

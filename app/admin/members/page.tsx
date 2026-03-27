@@ -2,17 +2,15 @@ import { TopNav } from "@/components/TopNav";
 import { ensureSiteAdmin } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import { PageTitle } from "@/components/ui/PageTitle";
-import { Field } from "@/components/ui/Field";
-import { Button } from "@/components/ui/Button";
-import { updateMemberAdminAction } from "@/lib/actions";
 import { InviteMemberForm } from "@/components/admin/InviteMemberForm";
+import { MemberAdminForm } from "@/components/admin/MemberAdminForm";
 
 export default async function AdminMembersPage() {
   const { supabase } = await ensureSiteAdmin();
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, full_name, email, role, status, dues_ok, dues_renewal_date, membership_type, skill_level, weight_class, boat_storage_fee_ok, boat_storage_fee_renewal_date",
+      "id, full_name, email, role, status, dues_ok, dues_renewal_date, membership_type, skill_level, weight_class, owns_private_boat, boat_storage_fee_ok, boat_storage_fee_renewal_date",
     )
     .order("full_name");
 
@@ -32,84 +30,7 @@ export default async function AdminMembersPage() {
                 <span className="muted">{m.email}</span>
               </div>
 
-              <form action={updateMemberAdminAction} className="form-grid">
-                <input type="hidden" name="member_id" value={m.id} />
-
-                <Field label="Role">
-                  <select name="role" defaultValue={m.role}>
-                    <option value="member">member</option>
-                    <option value="coach">coach</option>
-                    <option value="equipment_manager">equipment_manager</option>
-                    <option value="admin">admin</option>
-                  </select>
-                </Field>
-
-                <Field label="Status">
-                  <select name="status" defaultValue={m.status}>
-                    <option value="active">active</option>
-                    <option value="suspended">suspended</option>
-                    <option value="inactive">inactive (removed)</option>
-                  </select>
-                </Field>
-
-                <Field label="Membership Type">
-                  <select name="membership_type" defaultValue={m.membership_type}>
-                    <option value="community">community</option>
-                    <option value="competitive">competitive</option>
-                    <option value="ltr">ltr</option>
-                  </select>
-                </Field>
-
-                <Field label="Dues">
-                  <select name="dues_ok" defaultValue={m.dues_ok ? "true" : "false"}>
-                    <option value="true">paid</option>
-                    <option value="false">due</option>
-                  </select>
-                </Field>
-
-                <Field label="Dues Renewal Date">
-                  <input name="dues_renewal_date" type="date" defaultValue={m.dues_renewal_date ?? ""} />
-                </Field>
-
-                <Field label="Boat Storage Fee">
-                  <select name="boat_storage_fee_ok" defaultValue={m.boat_storage_fee_ok ? "true" : "false"}>
-                    <option value="true">paid</option>
-                    <option value="false">due</option>
-                  </select>
-                </Field>
-
-                <Field label="Boat Storage Renewal Date">
-                  <input
-                    name="boat_storage_fee_renewal_date"
-                    type="date"
-                    defaultValue={m.boat_storage_fee_renewal_date ?? ""}
-                  />
-                </Field>
-
-                <Field label="Skill Level">
-                  <select name="skill_level" defaultValue={m.skill_level}>
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
-                    <option value="Elite">Elite</option>
-                  </select>
-                </Field>
-
-                <Field label="Weight Class">
-                  <select name="weight_class" defaultValue={m.weight_class}>
-                    <option value="Lightweight">Lightweight</option>
-                    <option value="Mid-weight">Mid-weight</option>
-                    <option value="Heavyweight">Heavyweight</option>
-                  </select>
-                </Field>
-
-                <div className="row">
-                  <Button type="submit">Save Member</Button>
-                  <Button type="submit" variant="secondary" name="status" value="inactive">
-                    Remove Access
-                  </Button>
-                </div>
-              </form>
+              <MemberAdminForm member={m} />
             </Card>
           ))}
         </div>

@@ -55,7 +55,7 @@ export async function getMyProfileSummary() {
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, full_name, email, role, status, dues_ok, dues_renewal_date, dues_last_paid_at, boat_storage_fee_ok, boat_storage_fee_renewal_date, boat_storage_fee_last_paid_at, membership_type, skill_level, weight_class",
+      "id, full_name, email, role, status, dues_ok, dues_renewal_date, dues_last_paid_at, owns_private_boat, boat_storage_fee_ok, boat_storage_fee_renewal_date, boat_storage_fee_last_paid_at, membership_type, skill_level, weight_class",
     )
     .eq("id", user.id)
     .single();
