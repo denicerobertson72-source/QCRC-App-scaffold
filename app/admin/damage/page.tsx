@@ -13,7 +13,7 @@ export default async function AdminDamagePage() {
 
   const { data } = await supabase
     .from("damage_reports")
-    .select("id, boat_id, severity, status, reported_at, description, boats(name), damage_photos(storage_path)")
+    .select("id, boat_id, severity, status, reported_at, description, boats(name,status), damage_photos(storage_path)")
     .order("reported_at", { ascending: false });
 
   const photoPaths = (data ?? []).flatMap((item) =>
@@ -44,7 +44,12 @@ export default async function AdminDamagePage() {
             <Card key={item.id} className="stack">
               <div className="page-title">
                 <h3>{(Array.isArray(item.boats) ? item.boats[0] : item.boats)?.name ?? item.boat_id}</h3>
-                <StatusChip label={item.status} />
+                <div className="row">
+                  <StatusChip label={item.status} />
+                  {(Array.isArray(item.boats) ? item.boats[0] : item.boats)?.status !== "available" ? (
+                    <StatusChip label="Out of Service" kind="reserved" />
+                  ) : null}
+                </div>
               </div>
 
               <p>

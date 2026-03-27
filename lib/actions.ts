@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { ensureProfile, ensureSiteAdmin } from "@/lib/auth";
 import { easternLocalInputToIso } from "@/lib/time";
 import { formatCurrencyStatusLine, sendTransactionalEmail } from "@/lib/email";
+import { formatEasternDateTime } from "@/lib/time";
 
 function skillLevelToClearance(level: string) {
   switch (level) {
@@ -258,8 +259,9 @@ export async function submitDamageAction(formData: FormData) {
       ? `${description}\nResponsible rower: ${responsibleMemberName}`
       : description;
 
+    let damageReportId: string | null = null;
     if (allPhotoPaths.length > 0) {
-      const { error } = await supabase.rpc("submit_damage_report", {
+      const { data: rpcResult, error } = await supabase.rpc("submit_damage_report", {
         p_reservation_id: reservationId || null,
         p_boat_id: boatId,
         p_severity: severity,
@@ -269,21 +271,74 @@ export async function submitDamageAction(formData: FormData) {
       });
 
       if (error) throw error;
+      damageReportId = rpcResult;
     } else {
-      const { error } = await supabase.from("damage_reports").insert({
-        reservation_id: reservationId || null,
-        boat_id: boatId,
-        reported_by: user.id,
-        responsible_member_id: null,
-        severity,
-        description: finalDescription,
-      });
+      const { data: inserted, error } = await supabase
+        .from("damage_reports")
+        .insert({
+          reservation_id: reservationId || null,
+          boat_id: boatId,
+          reported_by: user.id,
+          responsible_member_id: null,
+          severity,
+          description: finalDescription,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      damageReportId = inserted.id;
+    }
+
+    const { data: impactedReservations, error: impactedError } = await supabase
+      .from("reservations")
+      .select("id, start_time, profiles!reservations_created_by_fkey(id,full_name,email), boats(name)")
+      .eq("boat_id", boatId)
+      .eq("status", "reserved")
+      .gte("start_time", new Date().toISOString());
+    if (impactedError) throw impactedError;
+
+    const impactedRows = impactedReservations ?? [];
+    for (const impacted of impactedRows) {
+      const profile = Array.isArray(impacted.profiles) ? impacted.profiles[0] : impacted.profiles;
+      const boat = Array.isArray(impacted.boats) ? impacted.boats[0] : impacted.boats;
+      if (profile?.id) {
+        await supabase.from("notification_events").upsert(
+          {
+            notification_key: `boat-out:${damageReportId}:${impacted.id}`,
+            notification_type: "boat_out_of_service",
+            member_id: profile.id,
+            reservation_id: impacted.id,
+            payload: {
+              boat_name: boat?.name ?? boatId,
+              reservation_start: impacted.start_time,
+            },
+          },
+          { onConflict: "notification_key" },
+        );
+      }
+
+      if (profile?.email) {
+        try {
+          await sendTransactionalEmail({
+            to: profile.email,
+            subject: `QCRC reservation alert: ${boat?.name ?? "Boat"} is out of service`,
+            text: `Your reserved boat ${boat?.name ?? "boat"} is now out of service due to a damage report. Reservation time: ${formatEasternDateTime(
+              impacted.start_time,
+            )} ET. Please reserve another boat.`,
+            html: `<p>Your reserved boat <strong>${boat?.name ?? "boat"}</strong> is now out of service due to a damage report.</p><p><strong>Reservation time:</strong> ${formatEasternDateTime(
+              impacted.start_time,
+            )} ET</p><p>Please reserve another boat.</p>`,
+          });
+        } catch {
+          // Keep damage submission successful even without email delivery.
+        }
+      }
     }
 
     revalidatePath("/damage/new");
     revalidatePath("/reservations");
     revalidatePath("/admin/damage");
+    revalidatePath("/reserve");
     destination.searchParams.set("damage_status", "success");
     destination.searchParams.set("damage_message", "Damage report submitted.");
   } catch (error) {

@@ -3,19 +3,34 @@ import { signOutAction } from "@/lib/actions";
 import { Button } from "@/components/ui/Button";
 import { ensureProfile } from "@/lib/auth";
 import { GlobalOverdueAlert } from "@/components/ui/GlobalOverdueAlert";
+import { GlobalReservationAlert } from "@/components/ui/GlobalReservationAlert";
 import type { OverdueBoatAlert } from "@/lib/types";
 
 export async function TopNav() {
   const { supabase, user } = await ensureProfile();
-  const [{ data }, overdueResult] = await Promise.all([
+  const [{ data }, overdueResult, reservationAlertResult] = await Promise.all([
     supabase.from("profiles").select("role").eq("id", user.id).single(),
     supabase.rpc("overdue_boat_summary"),
+    supabase
+      .from("reservations")
+      .select("id, start_time, boats(name,status)")
+      .eq("created_by", user.id)
+      .eq("status", "reserved")
+      .gte("start_time", new Date().toISOString()),
   ]);
   const isAdmin = data?.role === "admin";
   const overdueBoats = (Array.isArray(overdueResult.data) ? overdueResult.data : []) as OverdueBoatAlert[];
+  const reservationAlerts = (reservationAlertResult.data ?? [])
+    .map((row: any) => ({
+      boatName: (Array.isArray(row.boats) ? row.boats[0] : row.boats)?.name ?? row.id,
+      boatStatus: (Array.isArray(row.boats) ? row.boats[0] : row.boats)?.status ?? "available",
+      startTime: row.start_time,
+    }))
+    .filter((row) => row.boatStatus !== "available");
 
   return (
     <>
+      <GlobalReservationAlert alerts={reservationAlerts.map(({ boatName, startTime }) => ({ boatName, startTime }))} />
       <GlobalOverdueAlert count={overdueBoats.length} boatNames={overdueBoats.map((boat) => boat.boat_name)} />
       <header className="topnav">
         <nav>
