@@ -13,8 +13,25 @@ export default async function AdminDamagePage() {
 
   const { data } = await supabase
     .from("damage_reports")
-    .select("id, boat_id, severity, status, reported_at, description")
+    .select("id, boat_id, severity, status, reported_at, description, boats(name), damage_photos(storage_path)")
     .order("reported_at", { ascending: false });
+
+  const photoPaths = (data ?? []).flatMap((item) =>
+    (Array.isArray(item.damage_photos) ? item.damage_photos : [])
+      .map((photo) => photo.storage_path)
+      .filter(Boolean),
+  );
+
+  const signedUrlMap = new Map<string, string>();
+  if (photoPaths.length > 0) {
+    const uniquePaths = [...new Set(photoPaths)];
+    const { data: signedUrls } = await supabase.storage.from("damage-photos").createSignedUrls(uniquePaths, 60 * 60);
+    for (const signed of signedUrls ?? []) {
+      if (signed.path && signed.signedUrl) {
+        signedUrlMap.set(signed.path, signed.signedUrl);
+      }
+    }
+  }
 
   return (
     <>
@@ -26,7 +43,7 @@ export default async function AdminDamagePage() {
           {(data ?? []).map((item) => (
             <Card key={item.id} className="stack">
               <div className="page-title">
-                <h3>{item.boat_id}</h3>
+                <h3>{(Array.isArray(item.boats) ? item.boats[0] : item.boats)?.name ?? item.boat_id}</h3>
                 <StatusChip label={item.status} />
               </div>
 
@@ -35,6 +52,33 @@ export default async function AdminDamagePage() {
               </p>
               <p>{item.description}</p>
               <p className="muted">{formatEasternDateTime(item.reported_at)} ET</p>
+
+              {Array.isArray(item.damage_photos) && item.damage_photos.length > 0 ? (
+                <div className="grid">
+                  {item.damage_photos.map((photo, index) => {
+                    const imageUrl = signedUrlMap.get(photo.storage_path);
+                    if (!imageUrl) {
+                      return (
+                        <Card key={`${item.id}-photo-${index}`} subtle>
+                          <p className="muted">{photo.storage_path}</p>
+                        </Card>
+                      );
+                    }
+
+                    return (
+                      <a key={`${item.id}-photo-${index}`} href={imageUrl} target="_blank" rel="noreferrer" className="card-subtle">
+                        <img
+                          src={imageUrl}
+                          alt={`Damage photo ${index + 1}`}
+                          style={{ width: "100%", borderRadius: "12px", display: "block", objectFit: "cover" }}
+                        />
+                      </a>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="muted">No photos attached.</p>
+              )}
 
               <form action={triageDamageAdminAction} className="form-grid">
                 <input type="hidden" name="damage_report_id" value={item.id} />
