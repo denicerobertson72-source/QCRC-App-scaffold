@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import { reserveBoatAction } from "@/lib/actions";
 import type { Boat } from "@/lib/types";
 import { StatusChip } from "@/components/ui/StatusChip";
@@ -7,7 +10,8 @@ import { deriveReservationEndLocal } from "@/lib/reservations";
 import { formatEasternDateTime } from "@/lib/time";
 
 export function ReservationForm({ boat, start, returnTo }: { boat: Boat; start: string; returnTo: string }) {
-  const end = deriveReservationEndLocal(start);
+  const [startTime, setStartTime] = useState(start);
+  const end = useMemo(() => deriveReservationEndLocal(startTime), [startTime]);
 
   return (
     <form action={reserveBoatAction} className="card form-grid">
@@ -32,7 +36,13 @@ export function ReservationForm({ boat, start, returnTo }: { boat: Boat; start: 
       <input type="hidden" name="boat_id" value={boat.id} />
       <input type="hidden" name="return_to" value={returnTo} />
       <Field label="Start">
-        <input name="start_time" type="datetime-local" defaultValue={start} required />
+        <input
+          name="start_time"
+          type="datetime-local"
+          value={startTime}
+          onChange={(event) => setStartTime(event.target.value)}
+          required
+        />
       </Field>
       <input type="hidden" name="end_time" value={end ?? ""} />
       <p className="muted">
