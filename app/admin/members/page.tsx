@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { InviteMemberForm } from "@/components/admin/InviteMemberForm";
 import { MemberAdminForm } from "@/components/admin/MemberAdminForm";
+import { StatusChip } from "@/components/ui/StatusChip";
 
 export default async function AdminMembersPage() {
   const { supabase } = await ensureSiteAdmin();
@@ -26,8 +27,13 @@ export default async function AdminMembersPage() {
           {(data ?? []).map((m) => (
             <Card key={m.id} className="stack">
               <div className="page-title">
-                <h3>{m.full_name}</h3>
-                <span className="muted">{m.email}</span>
+                <div className="stack" style={{ gap: "0.35rem" }}>
+                  <h3>{m.full_name}</h3>
+                  <span className="muted">{m.email}</span>
+                </div>
+                <div className="row">
+                  {m.owns_private_boat ? <StatusChip label="Private Boat Owner" kind="checked_out" /> : null}
+                </div>
               </div>
 
               <MemberAdminForm member={m} />
