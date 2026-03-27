@@ -7,10 +7,11 @@ import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { FlashNotice } from "@/components/ui/FlashNotice";
+import { deriveReservationEndLocal } from "@/lib/reservations";
+import { formatEasternDateTime } from "@/lib/time";
 
 type ReserveSearchParams = Promise<{
   start?: string;
-  end?: string;
   boatClassId?: string;
   reservation_status?: string;
   reservation_message?: string;
@@ -29,19 +30,18 @@ export default async function ReservePage({
   const params = await searchParams;
 
   const now = new Date();
-  const inTwoHours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
   const start = params.start ?? toInputDateTime(now);
-  const end = params.end ?? toInputDateTime(inTwoHours);
+  const end = deriveReservationEndLocal(start);
   const boatClassId = params.boatClassId ?? "";
   const reservationStatus = params.reservation_status === "error" ? "error" : params.reservation_status === "success" ? "success" : null;
   const reservationMessage = params.reservation_message ?? "";
-  const reserveReturnTo = `/reserve?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}${
+  const reserveReturnTo = `/reserve?start=${encodeURIComponent(start)}${
     boatClassId ? `&boatClassId=${encodeURIComponent(boatClassId)}` : ""
   }`;
 
   const [availableBoats, allBoats, profile] = await Promise.all([
-    getAvailableBoats(start, end, boatClassId || undefined),
+    getAvailableBoats(start, end ?? start, boatClassId || undefined),
     getBoats(),
     getMyProfileSummary(),
   ]);
@@ -57,18 +57,15 @@ export default async function ReservePage({
           <span className="eyebrow">Boat Matching</span>
           <PageTitle
             title="Reserve a Boat"
-            subtitle={`Skill level: ${profile.skill_level}. Weight class: ${profile.weight_class}. Search a time window, then reserve from boats you are cleared to use.`}
+            subtitle={`Skill level: ${profile.skill_level}. Weight class: ${profile.weight_class}. Reservations are limited to one two-hour outing on a single day.`}
           />
         </section>
 
         {reservationStatus && reservationMessage ? <FlashNotice status={reservationStatus} message={reservationMessage} /> : null}
 
         <form method="get" className="card form-grid">
-          <Field label="Start">
+          <Field label="Start time">
             <input name="start" type="datetime-local" defaultValue={start} required />
-          </Field>
-          <Field label="End">
-            <input name="end" type="datetime-local" defaultValue={end} required />
           </Field>
           <Field label="Boat Class">
             <select name="boatClassId" defaultValue={boatClassId}>
@@ -78,6 +75,9 @@ export default async function ReservePage({
               <option value="4x">4x</option>
             </select>
           </Field>
+          <p className="muted">
+            {end ? `End time will be set automatically to ${formatEasternDateTime(end)} ET.` : "Choose a start time that stays within the same day."}
+          </p>
           <Button type="submit">Find Eligible Boats</Button>
         </form>
 
@@ -87,7 +87,7 @@ export default async function ReservePage({
           {visibleBoats.map((boat) => {
             const reservable = boat.status === "available" && availableIds.has(boat.id);
             if (reservable) {
-              return <ReservationForm key={boat.id} boat={boat} start={start} end={end} returnTo={reserveReturnTo} />;
+              return <ReservationForm key={boat.id} boat={boat} start={start} returnTo={reserveReturnTo} />;
             }
 
             return (

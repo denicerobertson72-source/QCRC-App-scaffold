@@ -6,6 +6,7 @@ import { ensureProfile, ensureSiteAdmin } from "@/lib/auth";
 import { easternLocalInputToIso } from "@/lib/time";
 import { formatCurrencyStatusLine, sendTransactionalEmail } from "@/lib/email";
 import { formatEasternDateTime } from "@/lib/time";
+import { deriveReservationEndLocal } from "@/lib/reservations";
 
 function skillLevelToClearance(level: string) {
   switch (level) {
@@ -66,7 +67,7 @@ export async function reserveBoatAction(formData: FormData) {
 
   const boatId = String(formData.get("boat_id") ?? "");
   const startTime = String(formData.get("start_time") ?? "");
-  const endTime = String(formData.get("end_time") ?? "");
+  const endTime = deriveReservationEndLocal(startTime);
   const checkoutLocation = String(formData.get("checkout_location") ?? "");
   const notes = String(formData.get("notes") ?? "");
   const crewNames = String(formData.get("crew_names") ?? "");
@@ -74,6 +75,12 @@ export async function reserveBoatAction(formData: FormData) {
   const rawReturnTo = String(formData.get("return_to") ?? "/reserve");
   const returnTo = rawReturnTo.startsWith("/") ? rawReturnTo : "/reserve";
   const finalNotes = appendCrewNamesToNotes(notes, crewNames);
+  if (!endTime) {
+    const destination = new URL(returnTo, "http://local");
+    destination.searchParams.set("reservation_status", "error");
+    destination.searchParams.set("reservation_message", "Reservations must be two hours or less and stay within a single day.");
+    redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+  }
 
   const result = await supabase.rpc("reserve_boat", {
     p_boat_id: boatId,

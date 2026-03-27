@@ -3,8 +3,12 @@ import type { Boat } from "@/lib/types";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { deriveReservationEndLocal } from "@/lib/reservations";
+import { formatEasternDateTime } from "@/lib/time";
 
-export function ReservationForm({ boat, start, end, returnTo }: { boat: Boat; start: string; end: string; returnTo: string }) {
+export function ReservationForm({ boat, start, returnTo }: { boat: Boat; start: string; returnTo: string }) {
+  const end = deriveReservationEndLocal(start);
+
   return (
     <form action={reserveBoatAction} className="card form-grid">
       {boat.photo_url ? (
@@ -30,9 +34,10 @@ export function ReservationForm({ boat, start, end, returnTo }: { boat: Boat; st
       <Field label="Start">
         <input name="start_time" type="datetime-local" defaultValue={start} required />
       </Field>
-      <Field label="End">
-        <input name="end_time" type="datetime-local" defaultValue={end} required />
-      </Field>
+      <input type="hidden" name="end_time" value={end ?? ""} />
+      <p className="muted">
+        {end ? `End time will be set automatically to ${formatEasternDateTime(end)} ET.` : "Choose a start time that stays within the same day."}
+      </p>
       <Field label="Crew Names (optional)">
         <input name="crew_names" placeholder="Jane Doe, Sam Smith" />
       </Field>
