@@ -1,5 +1,5 @@
 import { ensureProfile } from "@/lib/auth";
-import type { Boat, BoatAvailabilityBlock, OverdueBoatAlert, ProfileSummary, ProgramSession, Reservation, SafetyEntry } from "@/lib/types";
+import type { Boat, BoatAvailabilityBlock, NotificationEvent, OverdueBoatAlert, ProfileSummary, ProgramSession, Reservation, SafetyEntry } from "@/lib/types";
 
 function profileNameFromRelation(profileRelation: unknown) {
   if (Array.isArray(profileRelation)) {
@@ -318,6 +318,29 @@ export async function getOverdueBoatAlerts() {
   const { data, error } = await supabase.rpc("overdue_boat_summary");
   if (error) throw error;
   return (data ?? []) as OverdueBoatAlert[];
+}
+
+export async function getMyNotifications(limit = 50) {
+  const { supabase, user } = await ensureProfile();
+  const { data, error } = await supabase
+    .from("notification_events")
+    .select("id, notification_type, payload, sent_at, read_at")
+    .eq("member_id", user.id)
+    .order("sent_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as NotificationEvent[];
+}
+
+export async function getUnreadNotificationCount() {
+  const { supabase, user } = await ensureProfile();
+  const { count, error } = await supabase
+    .from("notification_events")
+    .select("*", { count: "exact", head: true })
+    .eq("member_id", user.id)
+    .is("read_at", null);
+  if (error) throw error;
+  return count ?? 0;
 }
 
 export async function getSafetyDashboard() {

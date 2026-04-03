@@ -68,6 +68,14 @@ export type OverdueBoatAlert = {
   river_direction: string | null;
 };
 
+export type NotificationEvent = {
+  id: string;
+  notification_type: string;
+  payload: Record<string, unknown>;
+  sent_at: string;
+  read_at: string | null;
+};
+
 export type BoatAvailabilityBlock = {
   id: string;
   title: string;

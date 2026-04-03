@@ -362,6 +362,32 @@ export async function signOutAction() {
   redirect("/login");
 }
 
+export async function markNotificationReadAction(formData: FormData) {
+  const { supabase, user } = await ensureProfile();
+  const notificationId = String(formData.get("notification_id") ?? "");
+
+  const { error } = await supabase
+    .from("notification_events")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", notificationId)
+    .eq("member_id", user.id);
+
+  if (error) throw error;
+  revalidatePath("/notifications");
+}
+
+export async function markAllNotificationsReadAction() {
+  const { supabase, user } = await ensureProfile();
+  const { error } = await supabase
+    .from("notification_events")
+    .update({ read_at: new Date().toISOString() })
+    .eq("member_id", user.id)
+    .is("read_at", null);
+
+  if (error) throw error;
+  revalidatePath("/notifications");
+}
+
 export async function updateMemberAdminAction(formData: FormData) {
   const { supabase } = await assertSiteAdmin();
   const memberId = String(formData.get("member_id") ?? "");
@@ -820,9 +846,52 @@ export async function publishLineupBoardAdminAction(formData: FormData) {
     .eq("id", lineupBoardId);
   if (error) throw error;
 
+  if (publish) {
+    const { data: boardDetail, error: boardDetailError } = await supabase
+      .from("lineup_boards")
+      .select("title, board_type, race_event_id, session_id")
+      .eq("id", lineupBoardId)
+      .single();
+    if (boardDetailError) throw boardDetailError;
+
+    let recipientIds: string[] = [];
+    if (boardDetail.session_id) {
+      const { data: signups, error: signupsError } = await supabase
+        .from("session_signups")
+        .select("member_id")
+        .eq("session_id", boardDetail.session_id);
+      if (signupsError) throw signupsError;
+      recipientIds = [...new Set((signups ?? []).map((row) => row.member_id))];
+    } else if (boardDetail.race_event_id) {
+      const { data: signups, error: signupsError } = await supabase
+        .from("race_signups")
+        .select("member_id")
+        .eq("race_event_id", boardDetail.race_event_id);
+      if (signupsError) throw signupsError;
+      recipientIds = [...new Set((signups ?? []).map((row) => row.member_id))];
+    }
+
+    if (recipientIds.length > 0) {
+      const notifications = recipientIds.map((memberId) => ({
+        notification_key: `lineup-published:${lineupBoardId}:${memberId}`,
+        notification_type: "lineup_published",
+        member_id: memberId,
+        payload: {
+          title: boardDetail.title,
+          lineup_board_id: lineupBoardId,
+        },
+      }));
+      const { error: notificationError } = await supabase
+        .from("notification_events")
+        .upsert(notifications, { onConflict: "notification_key" });
+      if (notificationError) throw notificationError;
+    }
+  }
+
   revalidatePath("/admin/lineups");
   revalidatePath("/admin/races");
   revalidatePath("/lineups");
+  revalidatePath("/notifications");
   if (returnTo) redirect(returnTo);
 }
 
@@ -884,6 +953,13 @@ export async function cancelSessionAdminAction(formData: FormData) {
   const isCancelled = String(formData.get("is_cancelled") ?? "true") === "true";
   const cancelledReason = String(formData.get("cancelled_reason") ?? "");
 
+  const { data: sessionRow, error: sessionLoadError } = await supabase
+    .from("sessions")
+    .select("title, starts_at")
+    .eq("id", sessionId)
+    .single();
+  if (sessionLoadError) throw sessionLoadError;
+
   const { error } = await supabase
     .from("sessions")
     .update({
@@ -893,6 +969,32 @@ export async function cancelSessionAdminAction(formData: FormData) {
     .eq("id", sessionId);
   if (error) throw error;
 
+  if (isCancelled) {
+    const { data: signups, error: signupsError } = await supabase
+      .from("session_signups")
+      .select("member_id")
+      .eq("session_id", sessionId);
+    if (signupsError) throw signupsError;
+
+    const recipientIds = [...new Set((signups ?? []).map((row) => row.member_id))];
+    if (recipientIds.length > 0) {
+      const notifications = recipientIds.map((memberId) => ({
+        notification_key: `session-cancelled:${sessionId}:${memberId}:${sessionRow.starts_at}`,
+        notification_type: "session_cancelled",
+        member_id: memberId,
+        payload: {
+          title: sessionRow.title,
+          starts_at: sessionRow.starts_at,
+          cancelled_reason: cancelledReason || "Cancelled by coach/admin",
+        },
+      }));
+      const { error: notificationError } = await supabase
+        .from("notification_events")
+        .upsert(notifications, { onConflict: "notification_key" });
+      if (notificationError) throw notificationError;
+    }
+  }
+
   revalidatePath("/programs/saturday");
   revalidatePath("/programs/training");
   revalidatePath("/programs/training/beginner-intermediate");
@@ -901,6 +1003,7 @@ export async function cancelSessionAdminAction(formData: FormData) {
   revalidatePath("/admin/programs/saturday");
   revalidatePath("/admin/programs/training-beginner-intermediate");
   revalidatePath("/admin/programs/training-advanced");
+  revalidatePath("/notifications");
 }
 
 function monthWindowFromInput(monthInput: string) {

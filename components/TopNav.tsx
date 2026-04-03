@@ -5,10 +5,11 @@ import { ensureProfile } from "@/lib/auth";
 import { GlobalOverdueAlert } from "@/components/ui/GlobalOverdueAlert";
 import { GlobalReservationAlert } from "@/components/ui/GlobalReservationAlert";
 import type { OverdueBoatAlert } from "@/lib/types";
+import { getUnreadNotificationCount } from "@/lib/queries";
 
 export async function TopNav() {
   const { supabase, user } = await ensureProfile();
-  const [{ data }, overdueResult, reservationAlertResult] = await Promise.all([
+  const [{ data }, overdueResult, reservationAlertResult, unreadNotificationCount] = await Promise.all([
     supabase.from("profiles").select("role").eq("id", user.id).single(),
     supabase.rpc("overdue_boat_summary"),
     supabase
@@ -17,6 +18,7 @@ export async function TopNav() {
       .eq("created_by", user.id)
       .eq("status", "reserved")
       .gte("start_time", new Date().toISOString()),
+    getUnreadNotificationCount(),
   ]);
   const isAdmin = data?.role === "admin";
   const overdueBoats = (Array.isArray(overdueResult.data) ? overdueResult.data : []) as OverdueBoatAlert[];
@@ -42,6 +44,7 @@ export async function TopNav() {
           <Link href="/safety">Safety</Link>
           <Link href="/programs">Programs</Link>
           <Link href="/lineups">Lineups</Link>
+          <Link href="/notifications">Notifications{unreadNotificationCount > 0 ? ` (${unreadNotificationCount})` : ""}</Link>
           <Link href="/boats">Boats</Link>
           <Link href="/damage/new">Damage</Link>
           {isAdmin ? <Link href="/admin">Admin</Link> : null}
