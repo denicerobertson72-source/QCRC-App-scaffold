@@ -1,5 +1,6 @@
 import { ensureProfile } from "@/lib/auth";
 import type { Boat, BoatAvailabilityBlock, NotificationEvent, OverdueBoatAlert, ProfileSummary, ProgramSession, Reservation, SafetyEntry } from "@/lib/types";
+import { getEasternDateKey } from "@/lib/time";
 
 function profileNameFromRelation(profileRelation: unknown) {
   if (Array.isArray(profileRelation)) {
@@ -252,19 +253,18 @@ export async function getPublishedLineups() {
     .order("created_at", { ascending: false });
   if (error) throw error;
 
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const todayEastern = getEasternDateKey(new Date());
 
   return (data ?? []).filter((board) => {
     const session = Array.isArray(board.sessions) ? board.sessions[0] : board.sessions;
     const race = Array.isArray(board.race_events) ? board.race_events[0] : board.race_events;
 
     if (session?.starts_at) {
-      return new Date(session.starts_at) >= now;
+      return getEasternDateKey(session.starts_at) >= todayEastern;
     }
 
     if (race?.event_date) {
-      return String(race.event_date) >= today;
+      return String(race.event_date) >= todayEastern;
     }
 
     return true;
