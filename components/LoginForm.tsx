@@ -5,11 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 
-export function LoginForm() {
+export function LoginForm({ initialError = null }: { initialError?: string | null }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const [preferPassword, setPreferPassword] = useState(false);
 
   const storageKey = useMemo(() => {
@@ -48,31 +48,6 @@ export function LoginForm() {
       setMessage("Magic link sent. Check your inbox.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected login error");
-    }
-  }
-
-  async function signInWithPassword() {
-    setMessage(null);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/auth/password-login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const result = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) {
-        setError(result.error ?? "Password sign-in failed.");
-        return;
-      }
-      if (storageKey) window.localStorage.setItem(storageKey, "1");
-      window.location.href = "/reservations";
-    } catch (err) {
-      setError("Password sign-in could not reach the server. Try magic link or reset password.");
     }
   }
 
@@ -125,7 +100,7 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={sendMagicLink} className="card form-grid">
+    <div className="card form-grid">
       <h1>QCRC Login</h1>
       <p className="muted">Use your club email to get a one-time sign-in link.</p>
       <Field label="Email">
@@ -146,9 +121,13 @@ export function LoginForm() {
         />
       </Field>
       <div className="row">
-        <Button type="button" variant="secondary" onClick={signInWithPassword} disabled={!email || !password}>
-          Sign In with Password
-        </Button>
+        <form method="post" action="/api/auth/password-login">
+          <input type="hidden" name="email" value={email} />
+          <input type="hidden" name="password" value={password} />
+          <Button type="submit" variant="secondary" disabled={!email || !password}>
+            Sign In with Password
+          </Button>
+        </form>
         <Button type="button" variant="secondary" onClick={createPasswordAccount} disabled={!email || !password}>
           Create Password Login
         </Button>
@@ -157,17 +136,21 @@ export function LoginForm() {
         Forgot / Reset Password
       </Button>
       {!preferPassword ? (
-        <Button type="submit">Send Magic Link</Button>
+        <form onSubmit={sendMagicLink}>
+          <Button type="submit">Send Magic Link</Button>
+        </form>
       ) : (
         <div className="card-subtle">
           <p className="muted">Password login enabled for this email on this device.</p>
-          <Button type="submit" variant="secondary">
-            Use Magic Link Instead
-          </Button>
+          <form onSubmit={sendMagicLink}>
+            <Button type="submit" variant="secondary">
+              Use Magic Link Instead
+            </Button>
+          </form>
         </div>
       )}
       {message ? <p className="success">{message}</p> : null}
       {error ? <p className="error">{error}</p> : null}
-    </form>
+    </div>
   );
 }
