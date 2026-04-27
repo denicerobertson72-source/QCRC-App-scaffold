@@ -36,7 +36,7 @@ export function LoginForm({ initialError = null }: { initialError?: string | nul
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/reservations`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm?next=/reservations`,
         },
       });
 
@@ -61,7 +61,7 @@ export function LoginForm({ initialError = null }: { initialError?: string | nul
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/reservations`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm?next=/reservations`,
         },
       });
       if (signUpError) {
@@ -85,7 +85,7 @@ export function LoginForm({ initialError = null }: { initialError?: string | nul
     try {
       const supabase = createClient();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/account/security?reset=1`,
+        redirectTo: `${window.location.origin}/auth/confirm?next=/account/security?reset=1`,
       });
 
       if (resetError) {
