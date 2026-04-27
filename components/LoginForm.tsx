@@ -56,16 +56,23 @@ export function LoginForm() {
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        setError(signInError.message);
+      const response = await fetch("/api/auth/password-login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setError(result.error ?? "Password sign-in failed.");
         return;
       }
       if (storageKey) window.localStorage.setItem(storageKey, "1");
       window.location.href = "/reservations";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unexpected password login error");
+      setError("Password sign-in could not reach the server. Try magic link or reset password.");
     }
   }
 
