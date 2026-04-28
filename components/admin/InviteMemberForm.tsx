@@ -17,7 +17,7 @@ export function InviteMemberForm() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/reservations`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/reservations`,
       },
     });
 
