@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 
 export function LoginForm({ initialError = null }: { initialError?: string | null }) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -78,6 +80,30 @@ export function LoginForm({ initialError = null }: { initialError?: string | nul
     }
   }
 
+  async function signInWithPassword() {
+    setMessage(null);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+
+      if (storageKey) window.localStorage.setItem(storageKey, "1");
+      router.replace("/reservations");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unexpected password sign-in error");
+    }
+  }
+
   async function sendResetPassword() {
     setMessage(null);
     setError(null);
@@ -121,13 +147,9 @@ export function LoginForm({ initialError = null }: { initialError?: string | nul
         />
       </Field>
       <div className="row">
-        <form method="post" action="/api/auth/password-login">
-          <input type="hidden" name="email" value={email} />
-          <input type="hidden" name="password" value={password} />
-          <Button type="submit" variant="secondary" disabled={!email || !password}>
-            Sign In with Password
-          </Button>
-        </form>
+        <Button type="button" variant="secondary" onClick={signInWithPassword} disabled={!email || !password}>
+          Sign In with Password
+        </Button>
         <Button type="button" variant="secondary" onClick={createPasswordAccount} disabled={!email || !password}>
           Create Password Login
         </Button>
