@@ -1084,6 +1084,116 @@ export async function saveProgramSignupAction(formData: FormData) {
   revalidatePath("/admin/lineups");
 }
 
+export async function saveRowingMeetupMembershipAction(formData: FormData) {
+  const { supabase, user } = await ensureProfile();
+  const joined = String(formData.get("joined") ?? "true") === "true";
+  const skillLevel = String(formData.get("skill_level") ?? "Beginner");
+  const wants2x = String(formData.get("wants_2x") ?? "false") === "true";
+  const wants4x = String(formData.get("wants_4x") ?? "false") === "true";
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  const { data: existingMembership, error: existingError } = await supabase
+    .from("rowing_meetup_members")
+    .select("member_id")
+    .eq("member_id", user.id)
+    .maybeSingle();
+  if (existingError) throw existingError;
+
+  if (!joined) {
+    const { error: deleteError } = await supabase.from("rowing_meetup_members").delete().eq("member_id", user.id);
+    if (deleteError) throw deleteError;
+  } else {
+    const { error } = await supabase.from("rowing_meetup_members").upsert(
+      {
+        member_id: user.id,
+        skill_level: skillLevel,
+        wants_2x: wants2x,
+        wants_4x: wants4x,
+        notes: notes || null,
+      },
+      { onConflict: "member_id" },
+    );
+    if (error) throw error;
+
+    if (!existingMembership) {
+      const { data: profileRow, error: profileError } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      if (profileError) throw profileError;
+
+      const { data: memberRows, error: memberRowsError } = await supabase
+        .from("rowing_meetup_members")
+        .select("member_id")
+        .neq("member_id", user.id);
+      if (memberRowsError) throw memberRowsError;
+
+      const recipientIds = [...new Set((memberRows ?? []).map((row) => row.member_id))];
+      if (recipientIds.length > 0) {
+        const notifications = recipientIds.map((memberId) => ({
+          notification_key: `rowing-meetup-join:${user.id}:${memberId}`,
+          notification_type: "rowing_meetup_signup",
+          member_id: memberId,
+          payload: {
+            member_name: profileRow.full_name ?? user.email ?? "A new rower",
+          },
+        }));
+        const { error: notificationError } = await supabase
+          .from("notification_events")
+          .upsert(notifications, { onConflict: "notification_key" });
+        if (notificationError) throw notificationError;
+      }
+    }
+  }
+
+  revalidatePath("/programs");
+  revalidatePath("/programs/meetup");
+  revalidatePath("/notifications");
+  redirect("/programs/meetup");
+}
+
+export async function addRowingMeetupAvailabilityAction(formData: FormData) {
+  const { supabase, user } = await ensureProfile();
+  const weekday = Number(formData.get("weekday") ?? -1);
+  const startTime = String(formData.get("start_time") ?? "");
+  const endTime = String(formData.get("end_time") ?? "");
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("rowing_meetup_members")
+    .select("member_id")
+    .eq("member_id", user.id)
+    .maybeSingle();
+  if (membershipError) throw membershipError;
+  if (!membership) {
+    throw new Error("Join Rowing Meetup before adding availability.");
+  }
+
+  const { error } = await supabase.from("rowing_meetup_availability").insert({
+    member_id: user.id,
+    weekday,
+    start_time: startTime,
+    end_time: endTime,
+  });
+  if (error) throw error;
+
+  revalidatePath("/programs/meetup");
+}
+
+export async function removeRowingMeetupAvailabilityAction(formData: FormData) {
+  const { supabase, user } = await ensureProfile();
+  const slotId = String(formData.get("slot_id") ?? "");
+
+  const { error } = await supabase
+    .from("rowing_meetup_availability")
+    .delete()
+    .eq("id", slotId)
+    .eq("member_id", user.id);
+  if (error) throw error;
+
+  revalidatePath("/programs/meetup");
+}
+
 export async function addRaceEventAdminAction(formData: FormData) {
   const { supabase, user } = await assertAdmin();
   const title = String(formData.get("title") ?? "");
