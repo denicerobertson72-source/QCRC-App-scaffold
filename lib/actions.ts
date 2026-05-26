@@ -79,6 +79,27 @@ function normalizeCsvDate(value: string | undefined) {
   return raw || null;
 }
 
+function weekdayNumberFromCode(value: string) {
+  switch (value) {
+    case "sun":
+      return 0;
+    case "mon":
+      return 1;
+    case "tue":
+      return 2;
+    case "wed":
+      return 3;
+    case "thu":
+      return 4;
+    case "fri":
+      return 5;
+    case "sat":
+      return 6;
+    default:
+      return null;
+  }
+}
+
 function parseCsv(text: string) {
   const rows: string[][] = [];
   let current = "";
@@ -929,6 +950,75 @@ export async function addBoatAvailabilityBlockAdminAction(formData: FormData) {
   });
 
   if (error) throw error;
+  revalidatePath("/admin/availability");
+  revalidatePath("/reserve");
+}
+
+export async function addRecurringBoatAvailabilityBlocksAdminAction(formData: FormData) {
+  const { supabase, user } = await assertAdmin();
+  const title = String(formData.get("title") ?? "").trim();
+  const startDate = String(formData.get("start_date") ?? "");
+  const endDate = String(formData.get("end_date") ?? "");
+  const dailyStartTime = String(formData.get("daily_start_time") ?? "");
+  const dailyEndTime = String(formData.get("daily_end_time") ?? "");
+  const membershipType = String(formData.get("applies_to_membership_type") ?? "");
+  const boatClassId = String(formData.get("applies_to_boat_class_id") ?? "");
+  const isActive = String(formData.get("is_active") ?? "true") === "true";
+  const notes = String(formData.get("notes") ?? "");
+  const weekdays = formData
+    .getAll("weekdays")
+    .map((value) => weekdayNumberFromCode(String(value)))
+    .filter((value): value is number => value !== null);
+
+  if (!title || !startDate || !endDate || !dailyStartTime || !dailyEndTime || weekdays.length === 0) {
+    throw new Error("Recurring availability requires a title, date range, daily time window, and at least one weekday.");
+  }
+
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+    throw new Error("Recurring availability date range is invalid.");
+  }
+
+  const inserts: Array<{
+    title: string;
+    starts_at: string | null;
+    ends_at: string | null;
+    applies_to_membership_type: string | null;
+    applies_to_boat_class_id: string | null;
+    is_active: boolean;
+    notes: string | null;
+    created_by: string;
+  }> = [];
+
+  for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+    const dayOfWeek = cursor.getDay();
+    if (!weekdays.includes(dayOfWeek)) continue;
+
+    const year = cursor.getFullYear();
+    const month = String(cursor.getMonth() + 1).padStart(2, "0");
+    const day = String(cursor.getDate()).padStart(2, "0");
+    const datePart = `${year}-${month}-${day}`;
+
+    inserts.push({
+      title,
+      starts_at: easternLocalInputToIso(`${datePart}T${dailyStartTime}`),
+      ends_at: easternLocalInputToIso(`${datePart}T${dailyEndTime}`),
+      applies_to_membership_type: membershipType || null,
+      applies_to_boat_class_id: boatClassId || null,
+      is_active: isActive,
+      notes: notes || null,
+      created_by: user.id,
+    });
+  }
+
+  if (inserts.length === 0) {
+    throw new Error("No dates matched the selected weekday pattern.");
+  }
+
+  const { error } = await supabase.from("boat_availability_blocks").insert(inserts);
+  if (error) throw error;
+
   revalidatePath("/admin/availability");
   revalidatePath("/reserve");
 }
