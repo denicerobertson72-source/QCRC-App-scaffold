@@ -15,6 +15,12 @@ function addDays(date: Date, days: number) {
   return copy.toISOString().slice(0, 10);
 }
 
+function addYears(dateString: string, years: number) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const value = new Date(Date.UTC(year + years, month - 1, day));
+  return value.toISOString().slice(0, 10);
+}
+
 async function markNotification(admin: ReturnType<typeof createAdminClient>, key: string, memberId: string, payload: Record<string, unknown>) {
   const { error } = await admin.from("notification_events").insert({
     notification_key: key,
@@ -39,7 +45,7 @@ export async function GET(request: Request) {
 
   const { data: profiles, error } = await admin
     .from("profiles")
-    .select("id, full_name, email, dues_renewal_date, boat_storage_fee_renewal_date, status")
+    .select("id, full_name, email, dues_renewal_date, boat_storage_fee_renewal_date, usrowing_membership_date, safesport_date, status")
     .eq("status", "active")
     .neq("email", "");
 
@@ -92,6 +98,44 @@ export async function GET(request: Request) {
         },
       );
       if (shouldSend) lines.push(`Boat storage fee renews on ${profile.boat_storage_fee_renewal_date}. This is your 1 week reminder.`);
+    }
+    if (profile.usrowing_membership_date) {
+      const renewalDate = addYears(profile.usrowing_membership_date, 1);
+      if (renewalDate === in30) {
+        const shouldSend = await markNotification(admin, `usrowing-30:${profile.id}:${renewalDate}`, profile.id, {
+          category: "usrowing_membership",
+          days_before: 30,
+          renewal_date: renewalDate,
+        });
+        if (shouldSend) lines.push(`USRowing membership renews on ${renewalDate}. This is your 1 month reminder.`);
+      }
+      if (renewalDate === in7) {
+        const shouldSend = await markNotification(admin, `usrowing-7:${profile.id}:${renewalDate}`, profile.id, {
+          category: "usrowing_membership",
+          days_before: 7,
+          renewal_date: renewalDate,
+        });
+        if (shouldSend) lines.push(`USRowing membership renews on ${renewalDate}. This is your 1 week reminder.`);
+      }
+    }
+    if (profile.safesport_date) {
+      const renewalDate = addYears(profile.safesport_date, 1);
+      if (renewalDate === in30) {
+        const shouldSend = await markNotification(admin, `safesport-30:${profile.id}:${renewalDate}`, profile.id, {
+          category: "safesport",
+          days_before: 30,
+          renewal_date: renewalDate,
+        });
+        if (shouldSend) lines.push(`SafeSport renews on ${renewalDate}. This is your 1 month reminder.`);
+      }
+      if (renewalDate === in7) {
+        const shouldSend = await markNotification(admin, `safesport-7:${profile.id}:${renewalDate}`, profile.id, {
+          category: "safesport",
+          days_before: 7,
+          renewal_date: renewalDate,
+        });
+        if (shouldSend) lines.push(`SafeSport renews on ${renewalDate}. This is your 1 week reminder.`);
+      }
     }
 
     if (profile.email && lines.length > 0) {

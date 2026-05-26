@@ -30,6 +30,10 @@ export function ReservationActions({ reservation }: { reservation: Reservation }
         {canCheckin ? (
           <form action={checkinAction} className="inline-form">
             <input type="hidden" name="reservation_id" value={reservation.id} />
+            <select name="gate_status" defaultValue={reservation.gate_status ?? "locked"} required>
+              <option value="locked">Gate locked</option>
+              <option value="unlocked">Gate left unlocked</option>
+            </select>
             <input name="notes" placeholder="Condition notes" />
             <Button type="submit">Returned</Button>
           </form>

@@ -16,11 +16,16 @@ export type ProfileSummary = {
   id: string;
   full_name: string;
   email: string;
+  phone?: string | null;
+  sms_opt_in?: boolean;
+  sms_opt_in_at?: string | null;
   role: string;
   status: string;
   dues_ok: boolean;
   dues_renewal_date?: string | null;
   dues_last_paid_at?: string | null;
+  usrowing_membership_date?: string | null;
+  safesport_date?: string | null;
   owns_private_boat?: boolean;
   boat_storage_fee_ok?: boolean;
   boat_storage_fee_renewal_date?: string | null;
@@ -41,6 +46,7 @@ export type Reservation = {
   checked_in_at: string | null;
   checkout_location: string | null;
   river_direction?: string | null;
+  gate_status?: string | null;
   notes: string | null;
   boats?: { name: string } | null;
 };
@@ -55,8 +61,22 @@ export type SafetyEntry = {
   checked_in_at: string | null;
   checkout_location: string | null;
   river_direction: string | null;
+  gate_status: string | null;
   status: string;
   is_overdue: boolean;
+};
+
+export type SafetyResource = {
+  id: string;
+  title: string;
+  description: string | null;
+  resource_type: "photo" | "procedure" | "quiz" | string;
+  external_url: string | null;
+  storage_path: string | null;
+  mime_type: string | null;
+  sort_order: number;
+  is_published: boolean;
+  resource_url?: string | null;
 };
 
 export type OverdueBoatAlert = {

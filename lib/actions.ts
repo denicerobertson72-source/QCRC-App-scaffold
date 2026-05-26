@@ -3,10 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensureProfile, ensureSiteAdmin } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { easternLocalInputToIso } from "@/lib/time";
 import { formatCurrencyStatusLine, sendTransactionalEmail } from "@/lib/email";
 import { formatEasternDateTime } from "@/lib/time";
 import { deriveReservationEndLocal } from "@/lib/reservations";
+import { sendSms } from "@/lib/sms";
 
 function skillLevelToClearance(level: string) {
   switch (level) {
@@ -60,6 +63,88 @@ function appendCrewNamesToNotes(notes: string, crewNames: string) {
   if (!trimmedCrew) return trimmedNotes;
   const crewLine = `Crew: ${trimmedCrew}`;
   return trimmedNotes ? `${trimmedNotes}\n${crewLine}` : crewLine;
+}
+
+function sanitizeStorageFileName(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
+function parseBooleanLike(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "true" || normalized === "yes" || normalized === "y" || normalized === "1";
+}
+
+function normalizeCsvDate(value: string | undefined) {
+  const raw = (value ?? "").trim();
+  return raw || null;
+}
+
+function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let current = "";
+  let row: string[] = [];
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === "\"") {
+      if (inQuotes && next === "\"") {
+        current += "\"";
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      row.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") {
+        i += 1;
+      }
+      row.push(current.trim());
+      if (row.some((cell) => cell.length > 0)) {
+        rows.push(row);
+      }
+      row = [];
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current.length > 0 || row.length > 0) {
+    row.push(current.trim());
+    if (row.some((cell) => cell.length > 0)) {
+      rows.push(row);
+    }
+  }
+
+  return rows;
+}
+
+function csvRowsToObjects(text: string) {
+  const rows = parseCsv(text);
+  if (rows.length === 0) {
+    return [] as Record<string, string>[];
+  }
+
+  const headers = rows[0].map((header) => header.trim().toLowerCase());
+  return rows.slice(1).map((cells) => {
+    const record: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      record[header] = cells[index] ?? "";
+    });
+    return record;
+  });
 }
 
 export async function reserveBoatAction(formData: FormData) {
@@ -171,6 +256,202 @@ export async function cancelReservationAction(formData: FormData) {
   redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
 }
 
+export async function addSafetyResourceAdminAction(formData: FormData) {
+  const { supabase, user } = await assertAdmin();
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const resourceType = String(formData.get("resource_type") ?? "procedure");
+  const externalUrl = String(formData.get("external_url") ?? "").trim();
+  const sortOrder = Number(formData.get("sort_order") ?? 0);
+  const isPublished = String(formData.get("is_published") ?? "true") === "true";
+  const fileEntry = formData.get("file");
+  const file = typeof File !== "undefined" && fileEntry instanceof File && fileEntry.size > 0 ? fileEntry : null;
+
+  let storagePath: string | null = null;
+  let mimeType: string | null = null;
+
+  if (file) {
+    const safeName = sanitizeStorageFileName(file.name);
+    storagePath = `${user.id}/${Date.now()}-${safeName}`;
+    mimeType = file.type || null;
+    const { error: uploadError } = await supabase.storage.from("safety-resources").upload(storagePath, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+    if (uploadError) throw uploadError;
+  }
+
+  const { error } = await supabase.from("safety_resources").insert({
+    title,
+    description: description || null,
+    resource_type: resourceType,
+    external_url: externalUrl || null,
+    storage_path: storagePath,
+    mime_type: mimeType,
+    sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+    is_published: isPublished,
+    created_by: user.id,
+  });
+
+  if (error) throw error;
+  revalidatePath("/admin/safety");
+  revalidatePath("/safety");
+  redirect("/admin/safety");
+}
+
+export async function importMembersCsvAdminAction(formData: FormData) {
+  await assertSiteAdmin();
+  const admin = createAdminClient();
+  const fileEntry = formData.get("file");
+  const file = typeof File !== "undefined" && fileEntry instanceof File && fileEntry.size > 0 ? fileEntry : null;
+
+  if (!file) {
+    redirect("/admin/members?import_status=error&import_message=Please%20choose%20a%20CSV%20file.");
+  }
+
+  const text = await file.text();
+  const records = csvRowsToObjects(text);
+  if (records.length === 0) {
+    redirect("/admin/members?import_status=error&import_message=The%20CSV%20file%20did%20not%20contain%20any%20rows.");
+  }
+
+  const emails = [...new Set(records.map((record) => (record.email ?? "").trim().toLowerCase()).filter(Boolean))];
+  const { data: existingProfiles, error: existingProfilesError } = await admin
+    .from("profiles")
+    .select("id, email")
+    .in("email", emails);
+  if (existingProfilesError) throw existingProfilesError;
+
+  const existingByEmail = new Map((existingProfiles ?? []).map((profile) => [profile.email.toLowerCase(), profile.id]));
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://qcrc-team-management.vercel.app";
+
+  let imported = 0;
+  let invited = 0;
+  let updated = 0;
+  const errors: string[] = [];
+
+  for (const record of records) {
+    const email = (record.email ?? "").trim().toLowerCase();
+    if (!email) {
+      errors.push("Skipped a row with no email.");
+      continue;
+    }
+
+    const fullName = (record.full_name ?? record.name ?? "").trim() || email;
+    let profileId = existingByEmail.get(email) ?? null;
+
+    if (!profileId) {
+      const inviteResult = await admin.auth.admin.inviteUserByEmail(email, {
+        data: { full_name: fullName },
+        redirectTo: `${appUrl}/auth/confirm?next=/reservations`,
+      });
+
+      if (inviteResult.error || !inviteResult.data.user?.id) {
+        errors.push(`Could not invite ${email}: ${inviteResult.error?.message ?? "unknown error"}`);
+        continue;
+      }
+
+      profileId = inviteResult.data.user.id;
+      existingByEmail.set(email, profileId);
+      invited += 1;
+    }
+
+    const profilePayload = {
+      id: profileId,
+      email,
+      full_name: fullName,
+      phone: (record.phone ?? "").trim() || null,
+      role: (record.role ?? "").trim() || "member",
+      status: (record.status ?? "").trim() || "active",
+      membership_type: (record.membership_type ?? "").trim() || "community",
+      skill_level: (record.skill_level ?? "").trim() || "Beginner",
+      weight_class: (record.weight_class ?? "").trim() || "Mid-weight",
+      dues_ok: parseBooleanLike(record.dues_ok),
+      dues_renewal_date: normalizeCsvDate(record.dues_renewal_date),
+      usrowing_membership_date: normalizeCsvDate(record.usrowing_membership_date),
+      safesport_date: normalizeCsvDate(record.safesport_date),
+      owns_private_boat: parseBooleanLike(record.owns_private_boat),
+      boat_storage_fee_ok: parseBooleanLike(record.boat_storage_fee_ok),
+      boat_storage_fee_renewal_date: normalizeCsvDate(record.boat_storage_fee_renewal_date),
+      sms_opt_in: parseBooleanLike(record.sms_opt_in),
+    };
+
+    const { error } = await admin.from("profiles").upsert(profilePayload, { onConflict: "id" });
+    if (error) {
+      errors.push(`Could not import ${email}: ${error.message}`);
+      continue;
+    }
+
+    imported += 1;
+    if (existingProfiles?.some((profile) => profile.email.toLowerCase() === email)) {
+      updated += 1;
+    }
+  }
+
+  revalidatePath("/admin/members");
+  const message = `${imported} row(s) imported. ${updated} updated. ${invited} invited.${errors.length > 0 ? ` ${errors.length} issue(s): ${errors.slice(0, 3).join(" | ")}` : ""}`;
+  redirect(`/admin/members?import_status=${errors.length > 0 ? "error" : "success"}&import_message=${encodeURIComponent(message)}`);
+}
+
+export async function updateSafetyResourceAdminAction(formData: FormData) {
+  const { supabase, user } = await assertAdmin();
+  const resourceId = String(formData.get("resource_id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const resourceType = String(formData.get("resource_type") ?? "procedure");
+  const externalUrl = String(formData.get("external_url") ?? "").trim();
+  const sortOrder = Number(formData.get("sort_order") ?? 0);
+  const isPublished = String(formData.get("is_published") ?? "true") === "true";
+  const fileEntry = formData.get("file");
+  const file = typeof File !== "undefined" && fileEntry instanceof File && fileEntry.size > 0 ? fileEntry : null;
+
+  const { data: existingResource, error: existingError } = await supabase
+    .from("safety_resources")
+    .select("storage_path, mime_type")
+    .eq("id", resourceId)
+    .single();
+  if (existingError) throw existingError;
+
+  let storagePath = existingResource.storage_path as string | null;
+  let mimeType = existingResource.mime_type as string | null;
+
+  if (file) {
+    const safeName = sanitizeStorageFileName(file.name);
+    const nextStoragePath = `${user.id}/${Date.now()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage.from("safety-resources").upload(nextStoragePath, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+    if (uploadError) throw uploadError;
+
+    if (storagePath) {
+      await supabase.storage.from("safety-resources").remove([storagePath]);
+    }
+
+    storagePath = nextStoragePath;
+    mimeType = file.type || null;
+  }
+
+  const { error } = await supabase
+    .from("safety_resources")
+    .update({
+      title,
+      description: description || null,
+      resource_type: resourceType,
+      external_url: externalUrl || null,
+      storage_path: storagePath,
+      mime_type: mimeType,
+      sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+      is_published: isPublished,
+    })
+    .eq("id", resourceId);
+
+  if (error) throw error;
+  revalidatePath("/admin/safety");
+  revalidatePath("/safety");
+  redirect("/admin/safety");
+}
+
 export async function checkoutAction(formData: FormData) {
   const { supabase } = await ensureProfile();
   const reservationId = String(formData.get("reservation_id") ?? "");
@@ -210,6 +491,7 @@ export async function checkinAction(formData: FormData) {
   const { supabase } = await ensureProfile();
   const reservationId = String(formData.get("reservation_id") ?? "");
   const notes = String(formData.get("notes") ?? "");
+  const gateStatus = String(formData.get("gate_status") ?? "");
   const destination = new URL("/reservations", "http://local");
 
   const { error } = await supabase.rpc("checkin_reservation", {
@@ -221,6 +503,15 @@ export async function checkinAction(formData: FormData) {
     destination.searchParams.set("reservation_status", "error");
     destination.searchParams.set("reservation_message", error.message || "Unable to mark returned.");
     redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+  }
+
+  if (gateStatus) {
+    const updateResult = await supabase.from("reservations").update({ gate_status: gateStatus }).eq("id", reservationId);
+    if (updateResult.error) {
+      destination.searchParams.set("reservation_status", "error");
+      destination.searchParams.set("reservation_message", updateResult.error.message || "Return recorded, but gate status was not saved.");
+      redirect(`${destination.pathname}?${destination.searchParams.toString()}`);
+    }
   }
 
   revalidatePath("/reservations");
@@ -298,7 +589,7 @@ export async function submitDamageAction(formData: FormData) {
 
     const { data: impactedReservations, error: impactedError } = await supabase
       .from("reservations")
-      .select("id, start_time, profiles!reservations_created_by_fkey(id,full_name,email), boats(name)")
+      .select("id, start_time, profiles!reservations_created_by_fkey(id,full_name,email,phone,sms_opt_in), boats(name)")
       .eq("boat_id", boatId)
       .eq("status", "reserved")
       .gte("start_time", new Date().toISOString());
@@ -338,6 +629,18 @@ export async function submitDamageAction(formData: FormData) {
           });
         } catch {
           // Keep damage submission successful even without email delivery.
+        }
+      }
+      if (profile?.phone && profile?.sms_opt_in) {
+        try {
+          await sendSms({
+            to: profile.phone,
+            body: `QCRC alert: ${boat?.name ?? "Your boat"} is out of service for your reservation at ${formatEasternDateTime(
+              impacted.start_time,
+            )} ET. Please reserve another boat.`,
+          });
+        } catch {
+          // Keep damage submission successful even without SMS delivery.
         }
       }
     }
@@ -394,9 +697,15 @@ export async function updateMemberAdminAction(formData: FormData) {
   const role = String(formData.get("role") ?? "member");
   const status = String(formData.get("status") ?? "active");
   const membershipType = String(formData.get("membership_type") ?? "community");
+  const phone = String(formData.get("phone") ?? "").trim();
+  const smsOptIn = String(formData.get("sms_opt_in") ?? "false") === "true";
   const duesOk = String(formData.get("dues_ok") ?? "false") === "true";
   const duesRenewalDateRaw = String(formData.get("dues_renewal_date") ?? "");
   const duesRenewalDate = duesRenewalDateRaw || null;
+  const usrowingMembershipDateRaw = String(formData.get("usrowing_membership_date") ?? "");
+  const usrowingMembershipDate = usrowingMembershipDateRaw || null;
+  const safeSportDateRaw = String(formData.get("safesport_date") ?? "");
+  const safeSportDate = safeSportDateRaw || null;
   const ownsPrivateBoat = String(formData.get("owns_private_boat") ?? "false") === "true";
   const boatStorageFeeOk = String(formData.get("boat_storage_fee_ok") ?? "false") === "true";
   const boatStorageFeeRenewalDateRaw = String(formData.get("boat_storage_fee_renewal_date") ?? "");
@@ -406,7 +715,7 @@ export async function updateMemberAdminAction(formData: FormData) {
 
   const { data: existingMember, error: existingMemberError } = await supabase
     .from("profiles")
-    .select("full_name, email, dues_ok, dues_renewal_date, owns_private_boat, boat_storage_fee_ok, boat_storage_fee_renewal_date")
+    .select("full_name, email, phone, sms_opt_in, dues_ok, dues_renewal_date, usrowing_membership_date, safesport_date, owns_private_boat, boat_storage_fee_ok, boat_storage_fee_renewal_date")
     .eq("id", memberId)
     .single();
   if (existingMemberError) throw existingMemberError;
@@ -415,8 +724,13 @@ export async function updateMemberAdminAction(formData: FormData) {
     role,
     status,
     membership_type: membershipType,
+    phone: phone || null,
+    sms_opt_in: smsOptIn,
+    sms_opt_in_at: smsOptIn && !existingMember.sms_opt_in ? new Date().toISOString() : smsOptIn ? undefined : null,
     dues_ok: duesOk,
     dues_renewal_date: duesRenewalDate,
+    usrowing_membership_date: usrowingMembershipDate,
+    safesport_date: safeSportDate,
     dues_last_paid_at: duesOk && !existingMember.dues_ok ? new Date().toISOString() : undefined,
     skill_level: skillLevel,
     weight_class: weightClass,
@@ -709,6 +1023,7 @@ export async function saveRaceSignupAction(formData: FormData) {
   const wants1x = String(formData.get("wants_1x") ?? "false") === "true";
   const wants2x = String(formData.get("wants_2x") ?? "false") === "true";
   const wants4x = String(formData.get("wants_4x") ?? "false") === "true";
+  const wants8x = String(formData.get("wants_8x") ?? "false") === "true";
 
   if (!attending) {
     const { error } = await supabase
@@ -727,6 +1042,7 @@ export async function saveRaceSignupAction(formData: FormData) {
         wants_1x: wants1x,
         wants_2x: wants2x,
         wants_4x: wants4x,
+        wants_8x: wants8x,
       },
       { onConflict: "race_event_id,member_id" },
     );
@@ -885,6 +1201,25 @@ export async function publishLineupBoardAdminAction(formData: FormData) {
         .from("notification_events")
         .upsert(notifications, { onConflict: "notification_key" });
       if (notificationError) throw notificationError;
+
+      const { data: recipients, error: recipientError } = await supabase
+        .from("profiles")
+        .select("phone, sms_opt_in")
+        .in("id", recipientIds)
+        .eq("sms_opt_in", true);
+      if (recipientError) throw recipientError;
+
+      const phones = (recipients ?? []).map((row) => row.phone).filter(Boolean) as string[];
+      if (phones.length > 0) {
+        try {
+          await sendSms({
+            to: phones,
+            body: `QCRC alert: lineup published for ${boardDetail.title}. Open the app to view your boat and seat order.`,
+          });
+        } catch {
+          // Keep lineup publishing successful even if SMS delivery fails.
+        }
+      }
     }
   }
 
@@ -992,6 +1327,25 @@ export async function cancelSessionAdminAction(formData: FormData) {
         .from("notification_events")
         .upsert(notifications, { onConflict: "notification_key" });
       if (notificationError) throw notificationError;
+
+      const { data: recipients, error: recipientError } = await supabase
+        .from("profiles")
+        .select("phone, sms_opt_in")
+        .in("id", recipientIds)
+        .eq("sms_opt_in", true);
+      if (recipientError) throw recipientError;
+
+      const phones = (recipients ?? []).map((row) => row.phone).filter(Boolean) as string[];
+      if (phones.length > 0) {
+        try {
+          await sendSms({
+            to: phones,
+            body: `QCRC alert: ${sessionRow.title} has been cancelled. Reason: ${cancelledReason || "Cancelled by coach/admin"}.`,
+          });
+        } catch {
+          // Keep cancellation successful even if SMS delivery fails.
+        }
+      }
     }
   }
 

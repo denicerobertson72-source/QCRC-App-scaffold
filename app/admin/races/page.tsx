@@ -20,7 +20,7 @@ export default async function AdminRacesPage() {
     ? (
         await supabase
           .from("race_signups")
-          .select("race_event_id, birthdate, wants_1x, wants_2x, wants_4x, profiles(full_name)")
+          .select("race_event_id, birthdate, desired_race_count, wants_1x, wants_2x, wants_4x, wants_8x, profiles(full_name)")
           .in("race_event_id", raceIds)
       ).data ?? []
     : [];
@@ -67,24 +67,31 @@ export default async function AdminRacesPage() {
                     <tr>
                       <th>Rower</th>
                       <th>Birthdate</th>
+                      <th>Race Count</th>
                       <th>Prefs</th>
                     </tr>
                   </thead>
                   <tbody>
                     {raceSignups.length === 0 ? (
                       <tr>
-                        <td colSpan={3}>No signups yet.</td>
+                        <td colSpan={4}>No signups yet.</td>
                       </tr>
                     ) : (
                       raceSignups.map((signup, idx) => {
                         const profile = Array.isArray(signup.profiles) ? signup.profiles[0] : signup.profiles;
-                        const prefs = [signup.wants_1x ? "1x" : null, signup.wants_2x ? "2x" : null, signup.wants_4x ? "4x" : null]
+                        const prefs = [
+                          signup.wants_1x ? "1x" : null,
+                          signup.wants_2x ? "2x" : null,
+                          signup.wants_4x ? "4x" : null,
+                          signup.wants_8x ? "8x" : null,
+                        ]
                           .filter(Boolean)
                           .join(", ");
                         return (
                           <tr key={`${race.id}-${idx}`}>
                             <td>{profile?.full_name ?? "Unknown"}</td>
                             <td>{signup.birthdate}</td>
+                            <td>{signup.desired_race_count ?? 1}</td>
                             <td>{prefs || "-"}</td>
                           </tr>
                         );

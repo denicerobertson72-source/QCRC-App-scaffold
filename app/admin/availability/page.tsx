@@ -7,7 +7,7 @@ import {
   updateBoatAvailabilityBlockAdminAction,
 } from "@/lib/actions";
 import { getBoatAvailabilityBlocks } from "@/lib/queries";
-import { toEasternDateTimeLocalValue } from "@/lib/time";
+import { formatEasternDateTime, toEasternDateTimeLocalValue } from "@/lib/time";
 
 function toInputDateTime(value: string) {
   return toEasternDateTimeLocalValue(value);
@@ -22,7 +22,7 @@ export default async function AdminAvailabilityPage() {
       <main className="stack">
         <PageTitle
           title="Admin: Availability Blocks"
-          subtitle="Block reservation windows across all boats (or specific classes/groups) in one place."
+          subtitle="Block exact Eastern date/time reservation windows across all boats or targeted member groups."
         />
 
         <form action={addBoatAvailabilityBlockAdminAction} className="card form-grid">
@@ -30,10 +30,10 @@ export default async function AdminAvailabilityPage() {
           <Field label="Title">
             <input name="title" required placeholder="Youth practice" />
           </Field>
-          <Field label="Starts">
+          <Field label="Starts (date and time)">
             <input name="starts_at" type="datetime-local" required />
           </Field>
-          <Field label="Ends">
+          <Field label="Ends (date and time)">
             <input name="ends_at" type="datetime-local" required />
           </Field>
           <Field label="Membership group (optional)">
@@ -63,14 +63,17 @@ export default async function AdminAvailabilityPage() {
           {blocks.map((block) => (
             <form key={block.id} action={updateBoatAvailabilityBlockAdminAction} className="card form-grid">
               <h3>{block.title}</h3>
+              <p className="muted">
+                {formatEasternDateTime(block.starts_at)} ET to {formatEasternDateTime(block.ends_at)} ET
+              </p>
               <input type="hidden" name="block_id" value={block.id} />
               <Field label="Title">
                 <input name="title" defaultValue={block.title} required />
               </Field>
-              <Field label="Starts">
+              <Field label="Starts (date and time)">
                 <input name="starts_at" type="datetime-local" defaultValue={toInputDateTime(block.starts_at)} required />
               </Field>
-              <Field label="Ends">
+              <Field label="Ends (date and time)">
                 <input name="ends_at" type="datetime-local" defaultValue={toInputDateTime(block.ends_at)} required />
               </Field>
               <Field label="Membership group (optional)">

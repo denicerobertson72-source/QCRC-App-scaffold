@@ -58,6 +58,13 @@ export default async function AdminPage() {
             <p className="muted">Generate monthly dates and cancel sessions shown to rowers.</p>
             <Link href="/admin/programs" className="cta-link">Open Program Schedule</Link>
           </Card>
+
+          <Card className="stack program-tile">
+            <span className="section-kicker">Safety</span>
+            <h3>Basic Safety Info</h3>
+            <p className="muted">Post photos, procedures, and quiz links for members.</p>
+            <Link href="/admin/safety" className="cta-link">Manage Safety Info</Link>
+          </Card>
         </div>
 
         <Card className="quick-links">
