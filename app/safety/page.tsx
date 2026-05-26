@@ -47,7 +47,7 @@ export default async function SafetyPage() {
               <Card key={resource.id} subtle className="stack">
                 <div className="page-title">
                   <h4>{resource.title}</h4>
-                  <StatusChip label={resource.resource_type} kind={resource.resource_type === "quiz" ? "checked_out" : "available"} />
+                  <StatusChip label={resource.resource_type} kind={resource.resource_type === "quiz" ? "checked_out" : "default"} />
                 </div>
                 {resource.resource_url && (resource.resource_type === "photo" || resource.mime_type?.startsWith("image/")) ? (
                   <a href={resource.resource_url} target="_blank" rel="noreferrer">
