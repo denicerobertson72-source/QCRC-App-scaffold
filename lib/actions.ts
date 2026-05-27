@@ -994,7 +994,7 @@ export async function addRecurringBoatAvailabilityBlocksAdminAction(formData: Fo
   }> = [];
 
   for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-    const dayOfWeek = cursor.getDay();
+    const dayOfWeek = cursor.getDay() as WeekdayNumber;
     if (!weekdays.includes(dayOfWeek)) continue;
 
     const year = cursor.getFullYear();
