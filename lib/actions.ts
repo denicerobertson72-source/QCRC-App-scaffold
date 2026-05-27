@@ -79,7 +79,9 @@ function normalizeCsvDate(value: string | undefined) {
   return raw || null;
 }
 
-function weekdayNumberFromCode(value: string) {
+type WeekdayNumber = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+function weekdayNumberFromCode(value: string): WeekdayNumber | null {
   switch (value) {
     case "sun":
       return 0;
@@ -968,7 +970,7 @@ export async function addRecurringBoatAvailabilityBlocksAdminAction(formData: Fo
   const weekdays = formData
     .getAll("weekdays")
     .map((value) => weekdayNumberFromCode(String(value)))
-    .filter((value): value is number => value !== null);
+    .filter((value): value is WeekdayNumber => value !== null);
 
   if (!title || !startDate || !endDate || !dailyStartTime || !dailyEndTime || weekdays.length === 0) {
     throw new Error("Recurring availability requires a title, date range, daily time window, and at least one weekday.");
