@@ -31,6 +31,12 @@ export default function ProgramsPage() {
             <p className="muted">Select races, add birthdate, and choose preferred boat classes.</p>
             <Link href="/programs/racing" className="cta-link">Open Signup</Link>
           </Card>
+          <Card className="stack program-tile">
+            <span className="section-kicker">Community</span>
+            <h3>Rowing Meetup</h3>
+            <p className="muted">Opt in, share your availability, and get alerts when new rowers join the meetup pool.</p>
+            <Link href="/programs/meetup" className="cta-link">Open Meetup</Link>
+          </Card>
         </div>
       </main>
     </>

@@ -79,6 +79,25 @@ export type SafetyResource = {
   resource_url?: string | null;
 };
 
+export type RowingMeetupMember = {
+  member_id: string;
+  full_name: string;
+  email: string;
+  skill_level: string;
+  wants_2x: boolean;
+  wants_4x: boolean;
+  notes: string | null;
+  created_at: string;
+};
+
+export type RowingMeetupAvailability = {
+  id: string;
+  member_id: string;
+  weekday: number;
+  start_time: string;
+  end_time: string;
+};
+
 export type OverdueBoatAlert = {
   reservation_id: string;
   boat_name: string;

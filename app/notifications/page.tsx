@@ -22,6 +22,9 @@ function notificationTitle(notification: { notification_type: string; payload: R
   if (notification.notification_type === "billing_reminder") {
     return "Billing reminder";
   }
+  if (notification.notification_type === "rowing_meetup_signup") {
+    return "Rowing Meetup alert";
+  }
   return notification.notification_type.replaceAll("_", " ");
 }
 
@@ -37,6 +40,9 @@ function notificationBody(notification: { notification_type: string; payload: Re
   }
   if (notification.notification_type === "billing_reminder") {
     return `Reminder for ${String(notification.payload.category ?? "billing")} due on ${String(notification.payload.renewal_date ?? "")}.`;
+  }
+  if (notification.notification_type === "rowing_meetup_signup") {
+    return `${String(notification.payload.member_name ?? "A new rower")} joined Rowing Meetup. Open the meetup page to check their availability.`;
   }
   return "";
 }

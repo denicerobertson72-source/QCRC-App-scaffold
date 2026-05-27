@@ -1,5 +1,17 @@
 import { ensureProfile } from "@/lib/auth";
-import type { Boat, BoatAvailabilityBlock, NotificationEvent, OverdueBoatAlert, ProfileSummary, ProgramSession, Reservation, SafetyEntry, SafetyResource } from "@/lib/types";
+import type {
+  Boat,
+  BoatAvailabilityBlock,
+  NotificationEvent,
+  OverdueBoatAlert,
+  ProfileSummary,
+  ProgramSession,
+  Reservation,
+  RowingMeetupAvailability,
+  RowingMeetupMember,
+  SafetyEntry,
+  SafetyResource,
+} from "@/lib/types";
 import { getEasternDateKey } from "@/lib/time";
 
 function profileNameFromRelation(profileRelation: unknown) {
@@ -415,4 +427,66 @@ export async function getPublishedSafetyResources() {
     ...resource,
     resource_url: resource.external_url ?? (resource.storage_path ? signedUrlMap.get(resource.storage_path) ?? null : null),
   }));
+}
+
+export async function getRowingMeetupState() {
+  const { supabase, user } = await ensureProfile();
+
+  const [{ data: myMembership, error: membershipError }, { data: allMembers, error: membersError }, { data: slots, error: slotsError }] =
+    await Promise.all([
+      supabase
+        .from("rowing_meetup_members")
+        .select("member_id, skill_level, wants_2x, wants_4x, notes, created_at")
+        .eq("member_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("rowing_meetup_members")
+        .select("member_id, skill_level, wants_2x, wants_4x, notes, created_at, profiles(full_name,email)")
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("rowing_meetup_availability")
+        .select("id, member_id, weekday, start_time, end_time")
+        .order("weekday", { ascending: true })
+        .order("start_time", { ascending: true }),
+    ]);
+
+  if (membershipError) throw membershipError;
+  if (membersError) throw membersError;
+  if (slotsError) throw slotsError;
+
+  const members: RowingMeetupMember[] = (allMembers ?? []).map((row: any) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      member_id: row.member_id,
+      full_name: profile?.full_name ?? "Unknown",
+      email: profile?.email ?? "",
+      skill_level: row.skill_level,
+      wants_2x: row.wants_2x,
+      wants_4x: row.wants_4x,
+      notes: row.notes,
+      created_at: row.created_at,
+    };
+  });
+
+  const availability = (slots ?? []) as RowingMeetupAvailability[];
+  const myAvailability = availability.filter((slot) => slot.member_id === user.id);
+
+  return {
+    myMembership: myMembership
+      ? {
+          member_id: myMembership.member_id,
+          skill_level: myMembership.skill_level,
+          wants_2x: myMembership.wants_2x,
+          wants_4x: myMembership.wants_4x,
+          notes: myMembership.notes,
+          created_at: myMembership.created_at,
+        }
+      : null,
+    myAvailability,
+    members,
+    availabilityByMember: availability.reduce<Record<string, RowingMeetupAvailability[]>>((acc, slot) => {
+      acc[slot.member_id] = [...(acc[slot.member_id] ?? []), slot];
+      return acc;
+    }, {}),
+  };
 }
